@@ -7,56 +7,80 @@
 #include <cish/node.hpp>
 
 
+
 namespace cish
 {
     class Parser;
 }
 
 
+struct AstNode;
+
+
 class cish::Parser
 {
 public:
-    Node *createParseTree( Token *tokbuf, size_t tokcount );
+    AstNode *buildPT( Token* );
+    AstNode *buildAST( Token* );
+
 
 private:
-    Token *m_start, *m_end;
-    Token *m_prev, *m_curr;
-    NodeGrouping *m_root;
+    Token   *m_prev, *m_curr;
 
-    void emit_assign();
-    void emit_decl();
+    AstNode *ProdProgram();
+    AstNode *ProdStmnt();
+    AstNode *ProdExprStmnt();
+    AstNode *ProdReturn();
+    AstNode *ProdBlock();
+    AstNode *ProdTypeName();
+    AstNode *ProdCond();
+    AstNode *ProdDecl();
+    AstNode *ProdDeclVar();
+    AstNode *ProdDeclFunc();
+    AstNode *ProdDeclArgs();
+    AstNode *ProdCallFunc();
+    AstNode *ProdCallArgs();
+    AstNode *ProdScope();
 
-    Node *parseExpr();
-    Node *parseCompEqual();
-    Node *parseCompRelative();
-    Node *parseTerm();
-    Node *parseFactor();
-    Node *parseUnary();
-    Node *parsePrimary();
+    AstNode *ProdExpr();
+    AstNode *ProdPrecedence( uint8_t p );
+    Token   *ProdOperator( uint8_t p, bool &is_right );
+    AstNode *ProdPostfix();
+    AstNode *ProdPrefix();
+    AstNode *ProdTerm();
 
-    void   emit( Node* );
     Token *expect( uint32_t type, const char *fmt, ... );
     Token *consume( uint32_t type, const char *fmt, ... );
+    Token *consume( uint32_t type );
     Token *advance();
-    Token *retreat();
-    Token *peek( int offset=0 );
+    uint32_t peek( int offset=0 );
+    Token *check( uint32_t type );
     bool   isAtEnd();
 
     // template <uint32_t... types>
     template <typename... Args>
     Token *match( uint32_t type, Args... rest )
     {
-        if (m_curr->type == type)
-        {
-            return advance();
-        }
-
+        Token *tok = match(type);
+        if (tok) return tok;
         return match(rest...);
     }
 
-    Token *match()
+    Token *match( uint32_t type )
     {
+        if (m_curr->type == type)
+            return advance();
         return nullptr;
     }
 
+    // template <uint32_t... types>
+    template <typename... Args>
+    Token *check( uint32_t type, Args... rest )
+    {
+        Token *tok = check(type);
+        if (tok) return tok;
+        return check(rest...);
+    }
+
 };
+

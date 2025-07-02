@@ -1,37 +1,39 @@
-// #pragma once
+#pragma once
 
-// #include <stddef.h>
-// #include <stdint.h>
-// #include <cish/token.hpp>
-
-
-// namespace cish
-// {
-//     class Lexer;
-//     struct Token;
-// }
+#include <stddef.h>
+#include <stdint.h>
+#include <cish/token.hpp>
 
 
-// class cish::Lexer
-// {
-// public:
-//     size_t tokenize( const char *src, Token *buf, size_t bufsz );
+namespace cish
+{
+    class Lexer;
+    struct Token;
+}
 
-//     char advance();
-//     char peek( int offset=0 );
-//     bool match( char );
-//     bool matchStr( const char* );
-//     bool check( char );
-//     bool checkBrk( const char* );
-//     bool checkStr( const char* );
-//     bool isAtEnd();
-//     void emit( uint32_t type );
 
-// private:
-//     const char *m_curr;
-//     const char *m_end;
-//     Token      *m_out;
-//     Token      *m_outend;
+class cish::Lexer
+{
+public:
+    const char *m_src;
+    size_t tokenize( const char *src, Token *buf, size_t bufsz );
 
-// };
+    char advance();
+    char prev() { return *(m_src-1); }
+    char peek() { return *m_src; };
+    auto peekstr() { return m_src; };
+    bool check( const char *brk );
+    char match( const char *brk );
+    // bool matchStr( const char* );
+    // bool checkBrk( const char* );
+    // bool checkStr( const char* );
+    bool isAtEnd();
+    void emit( uint32_t type );
+
+private:
+    const char *m_end;
+    Token      *m_out;
+    Token      *m_outend;
+
+};
 

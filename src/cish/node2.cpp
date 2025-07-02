@@ -51,7 +51,8 @@ void cish::compileNode( Node *N )
             
             break;
 
-        case Type::Symbol: break;
+        case Type::Symbol:
+            break;
 
         case Type::Literal:
             compileLiteral(N->asLiteral);

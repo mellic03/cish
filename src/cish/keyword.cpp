@@ -2,44 +2,80 @@
 #include <string.h>
 #include <stdio.h>
 
-
-// static bool kwdIsValid( uint32_tkwd )
-// {
-//     using namespace cish;
-//     return Kwd::If<=kwd && kwd<=Kwd::Return;
-// }
+using namespace cish;
 
 
-// uint32_t cish::TypeGetEnum( const char *str )
+size_t cish::isKeyword( const char *str )
+{
+    for (auto &[kwstr, value]: Type::KwTypes)
+        if (strcmp(str, kwstr) == 0)
+            return 1;
+    return 0;
+}
+
 uint32_t cish::getKwdType( const char *str )
 {
-    uint32_t kwd;
-    if (isKeyword(str, &kwd))
-        return kwd;
+    for (auto &[kwstr, value]: Type::KwTypes)
+        if (strcmp(str, kwstr) == 0)
+            return value;
     return Type::Error;
 }
 
-
-// const char *cish::TypeGetStr( uint32_tkwd )
-// {
-//     if (kwdIsValid(kwd))
-//         return Keywords[(uint32_t)kwd];
-//     return nullptr;
-// }
-
-
-
-bool cish::isKeyword( const char *str, uint32_t *type )
+const char *cish::getKwdStr( uint32_t kwd )
 {
-    for (uint32_t i=1; i<sizeof(Keywords)/sizeof(Keywords[0]); i++)
-    {
-        if (strncmp(str, Keywords[i], strlen(Keywords[i])) == 0)
-        {
-            if (type)
-                *type = Type::Keyword + i;
-            return true;
-        }
-    }
-    return false;
+    if (Type::Kwd_BEGIN <= kwd && kwd < Type::Kwd_END)
+        return Type::KwTypes[kwd - Type::Kwd_BEGIN].str;
+    return "[cish::getKwdStr] kwd is not a valid keyword!";
 }
+
+
+
+
+
+
+size_t cish::isOperator( const char *str )
+{
+    for (auto &[opstr, optype]: Type::OpTypes)
+        if (strcmp(str, opstr) == 0)
+            return 1;
+    return 0;
+}
+
+uint32_t cish::getOpType( const char *str )
+{
+    for (auto &[opstr, value]: Type::OpTypes)
+        if (strcmp(str, opstr) == 0)
+            return value;
+    return Type::Error;
+}
+
+const char *cish::getOpStr( uint32_t op )
+{
+    if (Type::Op_BEGIN <= op && op < Type::Op_END)
+        return Type::OpTypes[op - Type::Op_BEGIN].str;
+    return "[cish::getKwdStr] kwd is not a valid keyword!";
+}
+
+
+
+
+
+
+size_t cish::isDataType( const char *str )
+{
+    for (auto &[s, v]: Type::DataTypes)
+        if (strcmp(str, s) == 0)
+            return 1;
+    return 0;
+}
+
+
+uint32_t cish::getDataType( const char *str )
+{
+    for (auto &[s, v]: Type::DataTypes)
+        if (strcmp(str, s) == 0)
+            return v;
+    return Type::Error;
+}
+
 

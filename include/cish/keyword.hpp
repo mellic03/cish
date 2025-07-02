@@ -3,15 +3,17 @@
 
 namespace cish
 {
-    static constexpr
-    const char *Keywords[] = {
-        "\0\0",
-        "if", "else", "while", "switch",
-        "let", "const",
-        "function", "return"
-    };
-
+    size_t isKeyword( const char *str );
     uint32_t getKwdType( const char* );
-    bool isKeyword( const char *str, uint32_t *kwtype=nullptr );
+    const char *getKwdStr( uint32_t );
+
+    size_t isOperator( const char* );
+    uint32_t getOpType( const char* );
+    const char *getOpStr( uint32_t );
+
+    size_t isDataType( const char* );
+    uint32_t getDataType( const char* );
+    // const char *getOpStr( uint32_t );
+
 }
 

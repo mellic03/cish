@@ -1,195 +1,289 @@
 #include "parser.hpp"
-#include <cish/node.hpp>
-
+#include "astnode.hpp"
+#include "production.hpp"
+#include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
 
-#define PARSE_ERROR(msg_) { printf("PARSE ERROR: %s\n", msg_); assert(0); }
+using namespace cish;
 
 
 
-void cish::Parser::emit_assign()
+
+
+AstNode *cish::Parser::buildPT( Token *buf )
 {
-    Token *tok = match(Type::Identifier);
-    Node *lhs = new NodeIdentifier(tok);
-    tok = consume(Type::Equal, "Expect \"=\" after identifier");
-    emit(new NodeBinary(lhs, tok, parseExpr()));
-}
-
-
-void cish::Parser::emit_decl()
-{
-    consume(Type::KwdLet, "Expect \"let\"");
-
-    Token *tok = consume(Type::Identifier, "Expect identifier after \"let\"");
-    Node  *lhs = new NodeIdentifier(tok);
-
-    // DataPrimitive::as_type<int64_t>("i64")
-    emit(new NodeDecl(tok->lexeme, "i64"));
-
-    if (peek()->type == Type::Equal)
-    {
-        retreat();
-        emit_assign();
-    }
-}
-
-
-
-
-cish::Node*
-cish::Parser::createParseTree( Token *tokbuf, size_t tokcount )
-{
-    m_start = tokbuf;
-    m_end   = m_start + tokcount;
-    m_prev  = nullptr;
-    m_curr  = m_start;
-
-    m_root = new NodeGrouping();
+    m_prev = nullptr;
+    m_curr = buf;
+    auto *root = new AstGroup();
 
     while (!isAtEnd())
     {
-        switch (peek()->type)
-        {
-            default: fprintf(stderr, "idk wtf to do here\n"); assert(0); break;
-            case Type::SemiColon:  advance();     break;
-            case Type::Identifier: emit_assign(); break;
-            case Type::KwdLet:     emit_decl();   break;
-        }
+        root->push(ProdStmnt());
     }
 
-    return m_root;
+    AstPrint AP(root);
+    AP.visit(root);
+    AstExec AE(root);
+    AE.visit(root);
+
+    return root;
 }
 
 
-// <expr>      ::=  <decl> ";"
-//              |   <assign> ";"
-//
-// <decl>      ::=  "let" IDENTIFIER ("=" <assign>)*
-//
-// <compEq>    ::=  <comp> (("!="|"==") <comp>)*
-// <compRel>   ::=  <term> ((">"|">="|"<"|"<=") <term>)*
-// <term>      ::=  <factor> (("-"|"+") <factor>)*
-// <unary>     ::=  (("let""!"|"-") <unary>)*
-//               |  <primary>
-//
-// <primary>   ::=  NUMBER | STRING | IDENTIFIER | KEYWORD
-//               |  "(" <expr> ")" ;
-//
-
-// cish::Node *cish::Parser::parseStatement()
-// {
-//     // if (match(Type::Identifier))
-//     // {
-//     //     Node *lhs = new NodeLeaf(m_prev);
-//     //     Node *rhs = parseExpr();
-//     //     return new NodeBinary(lhs, Type::Equal, rhs);
-//     // }
-
-//     if (match(Type::KwdLet, Type::KwdConst))
-//     {
-//         expect(Type::Identifier, "Expect identifier after (\"let\"|\"const\")");
-//         // return new NodeBinary(new NodeLeaf(m_prev), parseExpr());
-//         Node *lhs = new NodeLeaf(m_prev->type);
-//         Node *rhs = parseExpr();
-//         return new NodeBinary(lhs, rhs);
-//     }
-
-
-//     return parseCompEq();
-// }
-
-
-cish::Node *cish::Parser::parseExpr()
+AstNode *cish::Parser::buildAST( Token *buf )
 {
-    return parseCompEqual();
+    AstNode *PT = buildPT(buf);
+    AstNode *AST = PT;
+    return AST;
+}
+/*
+    <factor>  ::= <atom> | <decl> | <expr>
+    
+    <program> ::= <stmnt>*
+
+    <stmnt>   ::= <exprst>
+                | <cond>
+
+    <exprst>  ::= <kw_decl> ("=" <expr>)* ";"
+                | "return" <expr>* ";"
+                | <expr>* ";"
+
+    <kw_decl> ::= "let" | "const"
+
+    <cond>    ::= ("if"|"while") "("<expr>")" "{" <stmnt>* "}"
+
+    <expr>    ::= <term> (OPERATOR <expr>)*
+    <term>    ::= IDENTIFIER | STRING | NUMBER
+    <assign>  ::= IDENTIFIER "=" <expr>
+
+    1 - 2
+*/
+
+
+
+
+AstNode *cish::Parser::ProdProgram()
+{
+    AstNode *prog = nullptr;
+
+    return prog;
 }
 
 
-cish::Node *cish::Parser::parseCompEqual()
+AstNode *cish::Parser::ProdStmnt()
 {
-    Node *expr = parseCompRelative();
-    while (Token *tok = match(Type::Equal, Type::EqualEqual, Type::BangEqual))
-        expr = new NodeBinary(expr, tok, parseCompRelative());
-    return expr;
-}
-
-cish::Node *cish::Parser::parseCompRelative()
-{
-    Node *expr = parseTerm();
-    while (Token *tok = match(Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual))
-        expr = new NodeBinary(expr, tok, parseTerm());
-    return expr;
-}
-
-cish::Node *cish::Parser::parseTerm()
-{
-    Node *expr = parseFactor();        
-    while (Token *tok = match(Type::Plus, Type::Minus))
-        expr = new NodeBinary(expr, tok, parseFactor());
-    return expr;
+    if (check(Type::KwdLet))
+        return ProdDecl();
+    if (check(Type::KwdReturn))
+        return ProdReturn();
+    if (check(Type::KwdIf, Type::KwdWhile))
+        return ProdCond();
+    return ProdExprStmnt();
 }
 
 
-cish::Node *cish::Parser::parseFactor()
+
+static bool is_typename( uint32_t tp )
 {
-    Node *expr = parseUnary();
-    while (Token *tok = match(Type::Star, Type::Slash))
-        expr = new NodeBinary(expr, tok, parseUnary());
-    return expr;
+    return (Type::DataType_BEGIN <= tp && tp < Type::DataType_END);
+}
+
+AstNode *cish::Parser::ProdDecl()
+{
+    Token *kwtok = consume(Type::KwdLet);
+
+    if (!is_typename(peek()))
+        consume(Type::Error, "Expected typename after \"let\"");
+
+    Token *tptok = advance();
+    Token *idtok = consume(Type::Identifier, "Expected <identifier> after \"let %s\"", tptok->lexeme);
+    AstNode *idnt = new AstVariable(tptok, idtok);
+    AstNode *decl = new AstDecl(kwtok, idnt);
+
+    if (match(Type::SemiColon))
+        return decl;
+
+    consume(Type::Equal, "Expected \"=\" after \"let <identifier>\"");
+    AstNode *vrbl = new AstVariable(tptok, idtok);
+    AstNode *expr = new AstAssign(vrbl, ProdExprStmnt());
+
+    auto *group = new AstGroup(decl, expr);
+    group->m_woop = false;
+
+    return group;
 }
 
 
-cish::Node *cish::Parser::parseUnary()
+AstNode *cish::Parser::ProdReturn()
 {
-    if (Token *tok = match(Type::Bang, Type::Minus))
-        return new NodeUnary(tok, parseUnary());
-    return parsePrimary();
+    Token *kwtok = consume(Type::KwdReturn);
+    if (Token *tok = match(Type::SemiColon))
+        return new AstReturn(new AstLeaf(tok));
+    return new AstReturn(ProdExprStmnt());
 }
 
 
-cish::Node *cish::Parser::parsePrimary()
+
+
+AstNode *cish::Parser::ProdCond()
 {
-    // if (Token *tok = match(Type::KwdLet, Type::KwdConst))
-    // {
-    //     Node *lhs = new NodeLeaf(tok);
-    //     expect(Type::Identifier, "Expect identifier after \"let\"");
-    //     Node *rhs = new NodeLeaf(tok);
-    //     return new NodeUnary(tok, rhs);
-    //     // return new NodeBinary(new NodeLeaf(tok), parseExpr());
-    // }
-
-    if (Token *tok = match(Type::Identifier)) return new NodeIdentifier(tok);
-    if (Token *tok = match(Type::String))     return new NodeString(tok);
-    if (Token *tok = match(Type::Number))     return new NodeNumber(tok);
-
-    if (match(Type::LeftParen))
+    if (Token *kwd = match(Type::KwdIf, Type::KwdWhile))
     {
-        Node *expr = parseExpr();
-        consume(Type::RightParen, "Expect ')' after expression.");
+        consume(Type::LeftParen);
+        AstNode *expr = ProdExpr();
+        consume(Type::RightParen);
+        return new AstCond(kwd, expr, ProdScope());
+    }
+
+    consume(Type::Error, "Should be unreachable!");
+    return nullptr;
+}
+
+
+AstNode *cish::Parser::ProdScope()
+{
+    auto *group = new AstGroup();
+    consume(Type::LeftBrace);
+    while (!isAtEnd() && !match(Type::RightBrace))
+        group->push(ProdStmnt());
+    return group;
+}
+
+AstNode *cish::Parser::ProdExprStmnt()
+{
+    AstNode *expr = ProdExpr();
+    consume(Type::SemiColon, "Expected \";\" after <statement>");
+    return expr;
+}
+
+
+AstNode *cish::Parser::ProdExpr()
+{
+    AstNode *expr = ProdPrecedence(0);
+    return expr;
+}
+
+
+Token *cish::Parser::ProdOperator( uint8_t p, bool &is_right )
+{
+    const auto minfn = [](uint8_t x, uint8_t y ) { return (x < y) ? x : y; };
+
+    static constexpr
+    void *jmp[] = {
+        &&P0,  &&P1,  &&P2,  &&P3,
+        &&P4,  &&P5,  &&P6,  &&P7,
+        &&P8,  &&P9,  &&P10, &&P11,
+        &&P12, &&P13,
+        &&Px
+    };
+
+    static constexpr
+    size_t njmps = sizeof(jmp)/sizeof(jmp[0]);
+    size_t idx   = (p<njmps) ? p : njmps-1;
+    goto *jmp[idx];
+
+    #define OP_(...) if (Token *tok = match(__VA_ARGS__)) { is_right=false; return tok; }
+    // #define OP_(...) if (Token *tok = match(__VA_ARGS__)) { is_right=true;  return tok; }
+    P0: 
+    P1:  OP_( Type::Bang, Type::Tilde )
+    P2:  OP_( Type::Star, Type::Slash )
+    P3:  OP_( Type::Plus, Type::Minus )
+    P4:  OP_( Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual,
+              Type::EqualEqual, Type::BangEqual )
+    P5:  OP_( Type::Ampsnd, Type::Hat, Type::Bar )
+    P6:  OP_( Type::AmpAmpsnd, Type::BarBar )
+    P7:  OP_( Type::Equal )
+    P8:
+    P9:
+    P10: 
+    P11: 
+    P12: 
+    P13: 
+    Px:  return nullptr;
+    #undef IF_OP
+}
+
+
+AstNode *cish::Parser::ProdPrecedence( uint8_t p )
+{
+    auto *expr = ProdPostfix();
+    bool is_right = false;
+    while (Token *tok = ProdOperator(p, is_right))
+        expr = new AstBinary(expr, tok, ProdPrecedence(p+1));
+    return expr;
+}
+
+
+AstNode *cish::Parser::ProdPostfix()
+{
+    AstNode *expr = ProdPrefix();
+    if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
+        expr = new AstPostfix(expr, op);
+    return expr;
+}
+
+
+AstNode *cish::Parser::ProdPrefix()
+{
+    if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
+        return new AstPrefix(op, ProdTerm());
+
+    if (Token *op = match(Type::Bang, Type::Tilde, Type::Ampsnd, Type::Minus, Type::Plus))
+        return new AstPrefix(op, ProdTerm());
+
+    return ProdTerm();
+}
+
+
+AstNode *cish::Parser::ProdTerm()
+{
+    if (Token *tok = match(Type::Identifier))
+        return new AstLeaf(tok);
+
+    // if (Token *tok = match(Type::String))
+    //     return new AstLeaf(tok);
+
+    if (Token *tok = match(Type::Number))
+        return new AstNumber(tok);
+        // if (Token *tok = match(Type::KwdReturn))
+    //     return new AstBinary(new AstLeaf(tok), tok, ProdExpr());
+
+    if (Token *tok = match(Type::LeftParen))
+    {
+        AstNode *expr = ProdExpr();
+        consume(Type::RightParen);
         return expr;
     }
 
-    printf("[parsePrimary] Should be unreachable\n");
-    assert(false);
-
+    consume(Type::Error, "Should be unreachable!");
     return nullptr;
 }
 
 
 
-void cish::Parser::emit( Node *node )
-{
-    m_root->m_nodes.insert(node);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 cish::Token *cish::Parser::expect( uint32_t type, const char *fmt, ... )
 {
-    if (peek()->type == type)
-        return peek();
+    if (m_curr->type == type)
+        return m_curr;
 
     va_list vlist;
     va_start(vlist, fmt);
@@ -205,11 +299,12 @@ cish::Token *cish::Parser::expect( uint32_t type, const char *fmt, ... )
 
 cish::Token *cish::Parser::consume( uint32_t type, const char *fmt, ... )
 {
-    if (peek()->type == type)
+    if (m_curr->type == type)
         return advance();
 
     va_list vlist;
     va_start(vlist, fmt);
+    fprintf(stderr, "[PARSE ERROR] ");
     vfprintf(stderr, fmt, vlist);
     fprintf(stderr, "\n");
     va_end(vlist);
@@ -218,35 +313,42 @@ cish::Token *cish::Parser::consume( uint32_t type, const char *fmt, ... )
     return nullptr;
 }
 
+cish::Token *cish::Parser::consume( uint32_t type )
+{
+    return consume(
+        type, "Expected \"%s\", received \"%s\"",
+        TypeToStr(type), m_prev->lexeme
+    );
+}
+
 
 cish::Token *cish::Parser::advance()
 {
-    m_prev = m_curr;
-    if (m_curr < m_end)
-        m_curr++;
+    if (!isAtEnd())
+        m_prev = m_curr++;
     return m_prev;
 }
 
 
-cish::Token *cish::Parser::retreat()
+cish::Token *cish::Parser::check( uint32_t type )
 {
-    m_prev = m_curr;
-    if (m_curr > m_start)
-        m_curr--;
-    return m_prev;
-}
+    if (m_curr->type == type)
+        return m_curr;
+    return nullptr;
+};
 
-
-cish::Token *cish::Parser::peek( int offset )
+uint32_t cish::Parser::peek( int offset )
 {
-    Token *next = m_curr + offset;
-    if (m_curr+offset < m_end)
-        return m_curr+offset;
-    return m_end-1;
+    return (m_curr+offset)->type;
 };
 
 
 bool cish::Parser::isAtEnd()
 {
-    return peek()->type == Type::Eof;
+    return m_curr->type == Type::Eof;
 };
+
+
+
+
+

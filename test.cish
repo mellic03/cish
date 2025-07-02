@@ -1,12 +1,14 @@
 
-let X;
-X = 15 + (1 * 2) + 15 * 43 + 1 / (12 - 9);
 
-// let Y;
-// let Z = 123 / 4;
+let i64 X = (4 + 6) / 2;
 
-// X = 25;
-// X = A + (1 + 2) + 15 - (43*1);
 
-// let fn = 0;
-// let X = 12 * A+B*A;
+// Bitch = 5 + 3 * 4 / (2 + 1);
+// Y = 2*Bitch;
+// X = (Z = 2) - 5;
+// X = X & Y ^ Z | W;
+
+// let X = 2; // test comment let z = 14;
+// let Y = 5;
+// let abcd;
+// let Z = X + Y * (15 * X);

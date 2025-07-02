@@ -63,7 +63,7 @@ void *cish::sym_add( void *handle, const char *key, void *value )
     auto  *symtab = (symtab_t*)handle;
     sym_t *symbol = new (symtab->top) sym_t(key, value);
     symtab->top = symbol->next;
-    return (void*)symbol;
+    return (void*)(symbol->value);
 }
 
 

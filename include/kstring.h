@@ -43,17 +43,11 @@ inline const char *skip_brk( const char *s, const char *brk )
         bool good = false;
 
         for (size_t i=0; i<blen; i++)
-        {
             if (*s == brk[i])
-            {
                 good = true;
-            }
-        }
 
         if (!good)
-        {
             return s;
-        }
 
         s++;
     }

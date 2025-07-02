@@ -30,7 +30,9 @@ public:
     LinkedList()
     :   m_root(nullptr), m_size(0) {  };
 
-    void insert( NodeType* );
+    void push( NodeType* );
+    void pop();
+
     void remove( NodeType* );
     void makeFirst();
 
@@ -72,7 +74,7 @@ private:
 
 
 template <typename NodeType>
-void knl::LinkedList<NodeType>::insert( NodeType *node )
+void knl::LinkedList<NodeType>::push( NodeType *node )
 {
     m_size++;
 
@@ -90,6 +92,25 @@ void knl::LinkedList<NodeType>::insert( NodeType *node )
 
     curr->next = (LinkedListNode*)next;
     next->prev = (LinkedListNode*)curr;
+}
+
+
+template <typename NodeType>
+void knl::LinkedList<NodeType>::pop()
+{
+    if (m_size == 0)
+        return;
+
+    NodeType *curr = m_root;
+
+    while (curr && (curr->next))
+        curr = (NodeType*)(curr->next);
+
+    if (curr->prev)
+        curr->prev->next = nullptr;
+    curr->prev = nullptr;
+
+    m_size--;
 }
 
 

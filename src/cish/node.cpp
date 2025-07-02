@@ -1,8 +1,27 @@
 #include <cish/node.hpp>
+#include <cish/symtab.hpp>
+#include <cish/compile.hpp>
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <stdarg.h>
 
 using namespace cish;
+
+
+NodeError::NodeError( const char *fmt, ... )
+:   Node(Type::Error)
+{
+    va_list vlist;
+    va_start(vlist, fmt);
+    fprintf(stderr, "[PARSE ERROR] ");
+    vfprintf(stderr, fmt, vlist);
+    fprintf(stderr, "\n");
+    va_end(vlist);
+    assert(false);
+};
+
 
 
 void NodeGrouping::print()
@@ -12,86 +31,81 @@ void NodeGrouping::print()
     for (auto *N: m_nodes)
     {
         N->print();
-
         if (N->m_type != Type::Grouping)
-            printf(";\n");
+            printf("\n");
     }
-    // printf("]; ");
+    printf("\n");
+}
+
+void NodeProgRoot::print()
+{
+    NodeGrouping::print();
 }
 
 void NodeBinary::print()
 {
     printf("(");
     m_lhs->print();
-    (m_optype) ? printf(" %s ", TypeToStr(m_optype)) : printf(", ");
+    printf(" %s ", TypeToStr(m_type));
     m_rhs->print();
     printf(")");
 }
-
-
-
-
-
-// void NodeAssign::print()
-// {
-//     // printf("assign(");
-//     // m_lhs->print();
-//     // printf(", ");
-//     // m_rhs->print();
-//     // printf(")");
-//     m_lhs->print();
-//     printf(" = ");
-//     m_rhs->print();
-// }
-
-
 
 void NodeUnary::print()
 {
-    printf("(%s", TypeToStr(m_optype));
+    printf("(%s", TypeToStr(m_type));
     m_rhs->print();
     printf(")");
 }
 
 
-void NodeLeaf::print()
+// void NodeDecl::print()
+// {
+//     printf("decl(");
+//     printf(m_symkey);
+//     printf(" <-- ");
+//     m_rhs->print();
+//     printf(")");
+// }
+
+void NodeAssign::print()
 {
-    printf("%s", m_str);
+    printf("assign(");
+    printf(m_symkey);
+    printf(" <-- ");
+    m_rhs->print();
+    printf(")");
+}
+
+void NodeVariable::print()
+{
+    printf("%s", m_symkey);
 }
 
 
 
-void NodeDecl::print()
+NodeString::NodeString( Token *t )
+:   Node(Type::String),
+    m_value(t->lexeme)
 {
-    printf("declare(%s: %s)", m_target, m_dtype);
+
+}
+
+
+void NodeString::print()
+{
+    printf("\"%s\"", m_value);
 }
 
 
 NodeNumber::NodeNumber( Token *t )
-:   NodeLeaf(Type::Number, t)
+:   Node(Type::Number), as_i64(atoi(t->lexeme))
 {
-    // switch (m_optype)
-    // {
-    //     default: break;
-    //     case Type::i32: as_i32 = atoi(t->lexeme);  break;
-    //     case Type::i64: as_i64 = atoll(t->lexeme); break;
-    //     case Type::u32: as_u32 = atol(t->lexeme);  break;
-    //     case Type::u64: as_u64 = atoll(t->lexeme); break;
-    // }
 
-    as_i64 = atoi(t->lexeme);
 }
 
 void NodeNumber::print()
 {
-    // switch (m_optype)
-    // {
-    //     default: break;
-    //     case Type::i32: printf("ld", as_i32); break;
-    //     case Type::i64: printf("ld", as_i64); break;
-    //     case Type::u32: printf("ud", as_u32); break;
-    //     case Type::u64: printf("ud", as_u64); break;
-    // }
     printf("%ld", as_i64);
 }
 
@@ -101,115 +115,103 @@ void NodeNumber::print()
 
 
 
-
-
-
-
-
-
-#define PUSH(x_) (*(rsp++) = (x_))
-#define POP() (*(--rsp))
-
-
-void NodeGrouping::compile( Node*, int64_t *&rsp )
+void NodeGrouping::compile( CompileCtx &ctx )
 {
-    // int64_t *tmp = rsp;
-
-    printf("[NodeGrouping::compile]\n");
     for (Node *expr: m_nodes)
     {
-        expr->compile(this, rsp);
+        expr->compile(ctx);
     }
+}
 
-    // printf("top: %ld\n", rsp-tmp, *(rsp));
-};
-
-
-
-void NodeBinary::compile( Node*, int64_t *&rsp )
+void NodeProgData::compile( CompileCtx &ctx )
 {
-    printf("[NodeBinary::compile]\n");
-    printf("lhs->type: %s\n", TypeToStr(m_lhs->m_type));
-    m_lhs->compile(this, rsp);
-    printf("rhs->type: %s\n", TypeToStr(m_rhs->m_type));
-    m_rhs->compile(this, rsp);
-    // *(rsp++) = 5;
-    // *(rsp++) = 3;
+    ctx.m_dataBase = m_base;
+    ctx.m_dataEend = m_base + m_size;
+    ctx.m_dataTop  = 0;
+}
 
-    printf("pop rbx;\n");
-    int64_t rbx = *(--rsp);
-    printf("pop rax;\n");
-    int64_t rax = *(--rsp);
 
-    switch (m_optype)
+void NodeProgRoot::compile( CompileCtx &ctx )
+{
+    m_data->compile(ctx);
+    NodeGrouping::compile(ctx);
+}
+
+
+
+
+void NodeBinary::compile( CompileCtx &ctx )
+{
+    // printf("[NodeBinary::compile] (%s, \"%s\", %s)\n",
+    //     TypeToStr(m_lhs->m_type), TypeToStr(m_type), TypeToStr(m_rhs->m_type)
+    // );
+    m_lhs->compile(ctx);
+    m_rhs->compile(ctx);
+
+    ctx.writeText("pop rbx;\n");
+    ctx.writeText("pop rax;\n");
+
+    switch (m_type)
     {
         default: break;
-        case Type::Plus:  printf("add rax, rbx;\n"); rax += rbx; break;
-        case Type::Minus: printf("sub rax, rbx;\n"); rax -= rbx; break;
-        case Type::Star:  printf("mul rax, rbx;\n"); rax *= rbx; break;
-        case Type::Slash: printf("div rax, rbx;\n"); rax /= rbx; break;
+        case Type::Plus:  ctx.writeText("add rax, rbx;\n"); break;
+        case Type::Minus: ctx.writeText("sub rax, rbx;\n"); break;
+        case Type::Star:  ctx.writeText("mul rax, rbx;\n"); break;
+        case Type::Slash: ctx.writeText("div rax, rbx;\n"); break;
     }
 
-    *(rsp++) = rax;
-    printf("push rax;\n");
-
+    ctx.writeText("push rax;\n");
 };
 
 
 
-void NodeDecl::compile( Node *P, int64_t *&rsp )
+void NodeUnary::compile( CompileCtx &ctx )
 {
-    printf("[NodeDecl::compile]\n");
-    auto *idtype = DataPrimitive::as_type<int64_t>("i64");
+    printf("[NodeUnary::compile] type=\"%s\"\n", TypeToStr(m_type));
+    m_rhs->compile(ctx);
+    ctx.writeText("mov rax, 1;\n");
+    ctx.writeText("pop rbx;\n");
 
-    printf("align %ld;\n", idtype->m_align);
-    printf("resb %s, %ld;\n\n", m_target, idtype->m_size);
+    switch (m_type)
+    {
+        default:  break;
+        case Type::Bang:  ctx.writeText("error;\n"); break;
+        case Type::Minus: ctx.writeText("sub rax, rbx;\npush rax;\n"); break;
+    }
 }
 
 
-#include <cish/symtab.hpp>
 
-void NodeIdentifier::compile( Node*, int64_t *&rsp )
+
+// void NodeKeyword::compile( CompileCtx &ctx )
+// {
+//     switch (m_type)
+//     {
+//         default: assert(0); break;
+//         case Type::KwdLet: break;
+//     }
+// }
+
+
+
+void NodeVariable::compile( CompileCtx &ctx )
 {
-    printf("[NodeIdentifier::compile]\n");
-    // void *symtab;
+    uintptr_t offset = (uintptr_t)sym_find(ctx.symtab, m_symkey);
 
-    // if (!cish::sym_find(symtab, m_str))
-    // {
-    //     // cish::sym_add(symtab, m_str, rsp);
-    //     // rsp += align
-    // }
+    if (offset == 0x00)
+    {
+        offset = ctx.resb(64, 8);
+        offset = (uintptr_t)sym_add(ctx.symtab, m_symkey, (void*)offset);
+        ctx.writeText("resb [%lu], %lu; // [%s]\n", offset, 64, m_symkey);
+    }
 
-    // int64_t *ptr = (int64_t*)cish::sym_find(symtab, m_str);
-    // PUSH(*ptr);
-
-    // PUSH(12345);
+    ctx.writeText("push [%lu];\n", offset);
 }
 
-void NodeNumber::compile( Node *P, int64_t *&rsp )
+
+
+void NodeNumber::compile( CompileCtx &ctx )
 {
-    printf("[NodeNumber::compile]\n");
-    // if (P->m_type == Type::Binary)
-    // {
-    //     const char *reg = "";
-    //     if (this == ((NodeBinary*)P)->m_lhs) reg="rax";
-    //     if (this == ((NodeBinary*)P)->m_rhs) reg="rbx";
-    //     printf("mov %s, %ld;\n", as_i64);
-    // }
-
-    // else
-    // {
-        printf("push %ld;\n", as_i64);
-        *(rsp++) = as_i64;
-    // }
-
-    // switch (m_optype)
-    // {
-    //     default: break;
-    //     case Type::i32: printf("push %d; ",  as_i32); break;
-    //     case Type::i64: printf("push %ld; ", as_i64); break;
-    //     case Type::u32: printf("push %u; ",  as_u32); break;
-    //     case Type::u64: printf("push %lu; ", as_u64); break;
-    // }
+    ctx.writeText("push %ld;\n", as_i64);
 }
 

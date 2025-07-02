@@ -87,11 +87,13 @@
         "valarray": "cpp",
         "variant": "cpp",
         "*.inc": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "mpc.h": "c"
     },
     "C_Cpp.default.includePath": [
         "${default}",
         "${workspaceFolder}/external/",
         "${workspaceFolder}/include/",
     ],
+    "C_Cpp.default.cppStandard": "c++23"
 }

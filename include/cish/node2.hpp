@@ -20,7 +20,7 @@ namespace cish
     struct NodeUnary;
 
     struct NodeKeyword;
-    struct NodeSymbol;
+    struct NodeVariable;
     struct NodeLiteral;
     struct NodeString;
     struct NodeNumber;
@@ -44,7 +44,7 @@ struct cish::NodeKeyword
     const char *symkey;
 };
 
-struct cish::NodeSymbol
+struct cish::NodeVariable
 {
     const char *symkey;
 };
@@ -90,12 +90,26 @@ struct cish::Node
     union {
         NodeBinary  asBinary;
         NodeUnary   asUnary;
-        NodeSymbol  asSymbol;
+        NodeVariable  asSymbol;
         NodeLiteral asLiteral;
         NodeFunc    asFunc;
     };
 
 };
 
+
+enum class ParseSymbol: uint8_t
+{
+    
+
+
+};
+
+enum class AstSymbol: uint8_t
+{
+    
+
+
+};
 
 

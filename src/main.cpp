@@ -6,11 +6,17 @@
 #include <string.h>
 
 #include <cish.hpp>
+#include <cish/compile.hpp>
 #include <cish/token.hpp>
 #include <cish/interpret.hpp>
 #include <cish/symtab.hpp>
-#include "lexer/lexer.hpp"
+#include <cish/lexer.hpp>
+// #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
+// #include "parser/parser2.hpp"
+
+
+#include "../include/mpc.h"
 
 
 int main( int argc, char **argv )
@@ -34,65 +40,76 @@ int main( int argc, char **argv )
     std::string buffer(size, ' ');
     t.seekg(0);
     t.read(&buffer[0], size);
+    const char *src = buffer.c_str();
 
 
     std::array<cish::Token, 512> tokbuf;
+    // cish::Lexer lexer;
+    // size_t tokcount = lexer.tokenize(buffer.c_str(), tokbuf.data(), tokbuf.size());
     size_t tokcount = cish::lexerMain(buffer.c_str(), tokbuf.data(), tokbuf.size());
 
-    // std::cout << "---------------- LEXER  ----------------\n";
-    // for (size_t i=0; i<tokcount; i++)
-    // {
-    //     if (tokbuf[i].type != cish::Type::SemiColon)
-    //         printf("%s ", cish::TypeToStr(tokbuf[i].type));
-    //     else
-    //         printf(";\n");
-    // }
-    // std::cout << "\n";
-    // std::cout << "----------------------------------------\n\n\n";
+    std::cout << "---------------- LEXER  ----------------\n";
+    for (size_t i=0; i<tokcount; i++)
+    {
+        if (tokbuf[i].type != cish::Type::SemiColon)
+            printf("%s ", cish::TypeToStr(tokbuf[i].type));
+        else
+            printf(";\n");
+    }
+    std::cout << "\n";
+    std::cout << "----------------------------------------\n\n\n";
 
 
     std::cout << "---------------- PARSER ----------------\n";
     std::cout << "tokcount: " << tokcount << "\n";
     cish::Parser parser;
-    auto *ptree = parser.parse(tokbuf.data(), tokcount);
-          ptree->print();
+    auto *ptree = parser.buildAST(tokbuf.data());
+        //   ptree->print();
     std::cout << "----------------------------------------\n\n";
 
 
     // std::cout << "---------------- RUNNING ---------------\n";
-    // // int result = cish::interpret(ptree);
-    // int64_t *ptree_stack = new int64_t[512];
-    // int64_t *rsp = ptree_stack;
-    // memset(ptree_stack, 0, sizeof(ptree_stack));
+    // // // int result = cish::interpret(ptree);
+    // // int64_t *ptree_stack = new int64_t[512];
+    // // int64_t *rsp = ptree_stack;
+    // // memset(ptree_stack, 0, sizeof(ptree_stack));
 
-    // ptree->compile(nullptr, rsp);
-    // printf("Result: %ld\n", ptree_stack[0]);
+    // cish::CompileCtx ctx;
+    // ctx.symtab   = cish::sym_create(2048);;
+    // ctx.text_out = stdout;
+
+    // ptree->compile(ctx);
+    // // printf("Result: %ld\n", ptree_stack[0]);
     // std::cout << "----------------------------------------\n\n";
 
+    // mpc_parser_t *Expr  = mpc_new("expression");
+    // mpc_parser_t *Prod  = mpc_new("product");
+    // mpc_parser_t *Value = mpc_new("value");
+    // mpc_parser_t *Maths = mpc_new("maths");
 
-    // void *symtab = cish::sym_create(2048);
-    // cish::sym_add(symtab, "main", (void*)main);
-    // cish::sym_add(symtab, "SYMTAB_BEG", (void*)0xA0A0A0A0);
-    // cish::sym_add(symtab, "__boob_babe__", (void*)0xB0081E5);
-    // cish::sym_add(symtab, "DeezNuts", (void*)0xAABB);
-    // cish::sym_add(symtab, "BitchAss", (void*)0xBABECAFE);
-    // cish::sym_add(symtab, "SomeValue", (void*)main);
-    // cish::sym_add(symtab, "SomeFunction", (void*)main);
-    // cish::sym_add(symtab, "-D__is_kernel", (void*)0x00);
+    // mpca_lang(MPCA_LANG_DEFAULT,
+    // " expression : <product> (('+' | '-') <product>)*; "
+    // " product    : <value>   (('*' | '/')   <value>)*; "
+    // " value      : /[0-9]+/ | '(' <expression> ')';    "
+    // " maths      : /^/ <expression> /$/;               ",
+    // Expr, Prod, Value, Maths, NULL);
 
-    // void *symbol = cish::sym_next(symtab, nullptr);
-    // while (symbol)
+    // mpc_result_t r;
+
+    // if (mpc_parse("input", src, Maths, &r))
     // {
-    //     printf("symbol: %s\n", (char*)symbol);
-    //     symbol = cish::sym_next(symtab, symbol);
+    //     mpc_ast_print((mpc_ast_t*)(r.output));
+    //     mpc_ast_delete((mpc_ast_t*)(r.output));
     // }
-    // printf("find __boob_babe__: 0x%lx\n", cish::sym_find(symtab, "__boob_babe__"));
+    // else
+    // {
+    //     mpc_err_print(r.error);
+    //     mpc_err_delete(r.error);
+    // }
+
+    // mpc_cleanup(4, Expr, Prod, Value, Maths);
+
 
     return 0;
 }
 
-
-static void reeee()
-{
-
-}
