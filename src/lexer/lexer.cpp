@@ -168,8 +168,9 @@ size_t cish::lexerMain( const char *src, Token *tokbuf, size_t tokbufsz )
         new StateNumber(),
         new StateString(),
         new StateOperator(),
-        new StateSemiColon(),
         new StateParen(),
+        new StateSemiColon(),
+        new StateComma(),
     };
 
     glexer.numStates = sizeof(states) / sizeof(states[0]);

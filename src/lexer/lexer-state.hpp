@@ -98,6 +98,7 @@ struct StateSingleChLexeme: LexState<tp_>
 };
 
 using StateSemiColon = StateSingleChLexeme<Type::SemiColon, ';'>;
+using StateComma     = StateSingleChLexeme<Type::Comma, ','>;
 // using StatePlus      = StateOneChLexeme<Type::Plus, '+'>;
 // using StateMinus     = StateOneChLexeme<Type::Minus, '-'>;
 // using StateStar      = StateOneChLexeme<Type::Star, '*'>;

@@ -92,17 +92,6 @@ void AstExec::visitPostfix( AstPostfix *N )
 }
 
 
-void AstExec::visitLeaf( AstLeaf *N )
-{
-    if (N->m_tok->type == Type::Number)
-    {
-        // printf("    push %ld\n", atoi(N->m_tok->lexeme));
-        printf("    mov rax, %ld\n", atoi(N->m_tok->lexeme));   m_rax = atoi(N->m_tok->lexeme);
-        // *(m_top++) = atol(N->m_tok->lexeme);
-    }
-}
-
-
 
 void AstExec::visitDecl( AstDecl *N )
 {
@@ -133,8 +122,8 @@ void AstExec::visitAssign( AstAssign *N )
 
 void AstExec::visitVariable( AstVariable *N )
 {
-    printf("    mov rax, [.varname + 0x00]\n");
-    m_rax = std::bit_cast<int64_t, int64_t*>(&(N->m_data));
+    // printf("    mov rax, [.varname + 0x00]\n");
+    // m_rax = std::bit_cast<int64_t, int64_t*>(&(N->m_data));
 }
 
 void AstExec::visitDeclType( AstDeclType *N )
@@ -223,11 +212,6 @@ void AstPrint::visitPostfix( AstPostfix *N )
     printf(" %s)", TypeToStr(N->m_tok->type));
 }
 
-void AstPrint::visitLeaf( AstLeaf *N )
-{
-    printf("%s", N->m_tok->lexeme);
-}
-
 void AstPrint::visitDecl( AstDecl *N )
 {
     printf("decl ");
@@ -257,6 +241,15 @@ void AstPrint::visitDeclType( AstDeclType *N )
 void AstPrint::visitNumber( AstNumber *N )
 {
     printf("%ld", N->m_data);
+}
+
+
+void AstPrint::visitFunctionCall( AstFunctionCall *N )
+{
+    printf("call %s(", N->m_name);
+    if (N->m_args)
+        visit(N->m_args);
+    printf(")");
 }
 
 

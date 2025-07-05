@@ -9,21 +9,31 @@ namespace cish
 
     struct VmCtx
     {
-        uint8_t  *rip;
-        uint64_t *rsp;
+        VmOp     *txt;
+        uint64_t  rip;
         uint64_t  rbp;
-        uint64_t  regs[16];
+        uint64_t *stack;
+        uint64_t  rsp;
 
-        VmCtx( uint64_t *s );
-        VmCtx( const VmCtx& ) = delete;
-        VmCtx( VmCtx&& ) = delete;
+        VmCtx( uint64_t *program, size_t size );
 
-        uint8_t *next();
+        void push( uint64_t x )
+        {
+            stack[rsp++] = x;
+        }
 
-        uint64_t *getDst();
-        uint64_t  getSrc();
+        uint64_t pop()
+        {
+            return stack[--rsp];
+        }
+
+        uint64_t top()
+        {
+            return stack[rsp-1];
+        }
+
     };
 
-    void exec( uint8_t* );
+    int exec( uint64_t*, size_t );
 }
 

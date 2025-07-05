@@ -7,6 +7,7 @@ g++ \
     -g -std=c++23 \
     -I ./include/ \
     src/main.cpp \
+    src/assembler/assembler.cpp \
     src/cish/compile.cpp \
     src/cish/keyword.cpp \
     src/cish/node.cpp \

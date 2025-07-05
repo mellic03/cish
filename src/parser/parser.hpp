@@ -35,11 +35,6 @@ private:
     AstNode *ProdTypeName();
     AstNode *ProdCond();
     AstNode *ProdDecl();
-    AstNode *ProdDeclVar();
-    AstNode *ProdDeclFunc();
-    AstNode *ProdDeclArgs();
-    AstNode *ProdCallFunc();
-    AstNode *ProdCallArgs();
     AstNode *ProdScope();
 
     AstNode *ProdExpr();
@@ -47,7 +42,8 @@ private:
     Token   *ProdOperator( uint8_t p, bool &is_right );
     AstNode *ProdPostfix();
     AstNode *ProdPrefix();
-    AstNode *ProdTerm();
+    AstNode *ProdList();
+    AstNode *ProdPrimary();
 
     Token *expect( uint32_t type, const char *fmt, ... );
     Token *consume( uint32_t type, const char *fmt, ... );
@@ -61,8 +57,8 @@ private:
     template <typename... Args>
     Token *match( uint32_t type, Args... rest )
     {
-        Token *tok = match(type);
-        if (tok) return tok;
+        if (Token *tok = match(type))
+            return tok;
         return match(rest...);
     }
 

@@ -11,9 +11,10 @@
 #include <cish/interpret.hpp>
 #include <cish/symtab.hpp>
 #include <cish/lexer.hpp>
-// #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
-// #include "parser/parser2.hpp"
+#include "assembler/assembler.hpp"
+#include "vm/bytecode.hpp"
+#include "vm/vm.hpp"
 
 
 #include "../include/mpc.h"
@@ -48,7 +49,7 @@ int main( int argc, char **argv )
     // size_t tokcount = lexer.tokenize(buffer.c_str(), tokbuf.data(), tokbuf.size());
     size_t tokcount = cish::lexerMain(buffer.c_str(), tokbuf.data(), tokbuf.size());
 
-    std::cout << "---------------- LEXER  ----------------\n";
+    std::cout << "---------------- LEXER -----------------\n";
     for (size_t i=0; i<tokcount; i++)
     {
         if (tokbuf[i].type != cish::Type::SemiColon)
@@ -63,8 +64,19 @@ int main( int argc, char **argv )
     std::cout << "---------------- PARSER ----------------\n";
     std::cout << "tokcount: " << tokcount << "\n";
     cish::Parser parser;
-    auto *ptree = parser.buildAST(tokbuf.data());
+    auto *ast = parser.buildAST(tokbuf.data());
         //   ptree->print();
+    std::cout << "----------------------------------------\n\n";
+
+
+    std::cout << "---------------- ASSEMBLER -------------\n";
+    uint64_t *program = new uint64_t[512];
+    cish::assemble(ast, program, 512);
+    std::cout << "----------------------------------------\n\n";
+
+    std::cout << "---------------- EXEC ------------------\n";
+    int res = cish::exec(program, 512);
+    std::cout << "res: " << res << "\n";
     std::cout << "----------------------------------------\n\n";
 
 
