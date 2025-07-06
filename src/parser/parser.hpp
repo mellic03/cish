@@ -14,9 +14,6 @@ namespace cish
 }
 
 
-struct AstNode;
-
-
 class cish::Parser
 {
 public:

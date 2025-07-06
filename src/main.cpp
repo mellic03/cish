@@ -70,12 +70,12 @@ int main( int argc, char **argv )
 
 
     std::cout << "---------------- ASSEMBLER -------------\n";
-    uint64_t *program = new uint64_t[512];
-    cish::assemble(ast, program, 512);
+    uint32_t *program = new uint32_t[1024];
+    cish::assemble(ast, program, 2048);
     std::cout << "----------------------------------------\n\n";
 
     std::cout << "---------------- EXEC ------------------\n";
-    int res = cish::exec(program, 512);
+    int res = cish::exec(program, 2048);
     std::cout << "res: " << res << "\n";
     std::cout << "----------------------------------------\n\n";
 

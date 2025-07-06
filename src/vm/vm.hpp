@@ -5,17 +5,28 @@
 
 namespace cish
 {
-    union VmOp;
+    struct VmOp;
+
+    enum Reg_: uint8_t
+    {
+        Reg_rax, Reg_rbx, Reg_rcx, Reg_rdx,
+        Reg_rip, Reg_rsp, Reg_rbp,
+    };
 
     struct VmCtx
     {
         VmOp     *txt;
-        uint64_t  rip;
-        uint64_t  rbp;
         uint64_t *stack;
-        uint64_t  rsp;
 
-        VmCtx( uint64_t *program, size_t size );
+        union {
+            uint64_t regs[8];
+            struct {
+                uint64_t rax, rbx, rcx, rdx;
+                uint64_t rip, rsp, rbp;
+            };
+        };
+
+        VmCtx( uint32_t *program, size_t size );
 
         void push( uint64_t x )
         {
@@ -34,6 +45,6 @@ namespace cish
 
     };
 
-    int exec( uint64_t*, size_t );
+    int exec( uint32_t*, size_t );
 }
 

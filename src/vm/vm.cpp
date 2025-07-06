@@ -2,36 +2,57 @@
 #include "bytecode.hpp"
 #include <bit>
 #include <stdio.h>
+#include <string.h>
 
 using namespace cish;
 
 
 
-cish::VmCtx::VmCtx( uint64_t *program, size_t size )
+cish::VmCtx::VmCtx( uint32_t *program, size_t size )
 :   txt((VmOp*)program),
     rip(0),
     // rbp(size-1),
     stack(new uint64_t[256]),
     rsp(0)
 {
+    memset(regs, 0, sizeof(regs));
     // ((VmOp*)&txt[rbp])->opcode = VmOp_exit;
 }
 
 
-int cish::exec( uint64_t *base, size_t size )
+
+static uint64_t packU64( const VmOpU64 &data )
+{
+    VmOpU64LoHi U;
+    U.lo = data.lo;
+    U.hi = data.hi;
+    return U.u64;
+}
+
+
+
+int cish::exec( uint32_t *program, size_t size )
 {
     void *jtab[256] = {
-        &&op_error, 
-        &&op_push,  &&op_pop,
-        &&op_pushn, &&op_popn,
-        &&op_addu,  &&op_subu, &&op_mulu, &&op_divu,
-        &&op_addi,  &&op_subi, &&op_muli, &&op_divi,
-        &&op_and,   &&op_or,   &&op_xor,
-        &&op_neg,   &&op_not,
-        &&op_jmp,   &&op_rjmp,
-        &&op_call,  &&op_ret,
+        &&op_nop,
+
+        &&op_movrd, &&op_movrr, &&op_movrrd, &&op_movrdr,
+        &&op_pushd, &&op_pop,   &&op_pushr,  &&op_popr,
+        &&op_pushrd,
+
+        &&op_addrd, &&op_subrd, &&op_mulrd,  &&op_divrd,
+        &&op_andrd, &&op_orrd,  &&op_xorrd,
+
+        &&op_addrr, &&op_subrr, &&op_mulrr,  &&op_divrr,
+        &&op_andrr, &&op_orrr,  &&op_xorrr,
+
+        &&op_adds,  &&op_subs,  &&op_muls,   &&op_divs,
+        &&op_ands,  &&op_ors,   &&op_xors,
+
+        &&op_jmpd,  &&op_jmpr,  &&op_rjmpd,  &&op_rjmpr,
+        &&op_calld, &&op_callr, &&op_ret,
+
         &&op_exit,
-        &&op_print,
     };
 
     for (int i=VmOp_NumOps; i<256; i++)
@@ -39,67 +60,149 @@ int cish::exec( uint64_t *base, size_t size )
         jtab[i] = &&op_error;
     }
 
-    VmCtx ctx(base, size);
-    VmOp *op = ctx.txt - 1;
+    VmCtx ctx(program, size);
+
+    auto *op    = (VmOp*)(ctx.txt - 1);
+    auto *opd   = (VmOpData*)op;
+    auto *opr   = (VmOpReg*)op;
+    auto *oprd  = (VmOpRegData*)op;
+    auto *oprr  = (VmOpRegReg*)op;
+    auto *oprrd = (VmOpRegRegData*)op;
+    auto *oprdr = (VmOpRegDataReg*)op;
+
+    #define BINARY_OP(op_) { auto A=ctx.pop(); auto B=ctx.pop(); ctx.push(B op_ A); }
+    #define UNARY_OP(op_)  { ctx.push(op_ ctx.pop()); }
+    #define BINARY_RD(op_) { ctx.regs[oprd->idx] op_ packU64(oprd->data); }
+    #define BINARY_RR(op_) { ctx.regs[oprr->idxA] op_ ctx.regs[oprr->idxB]; }
 
     #define DISPATCH()\
-        op++;\
-        ctx.rip = op - ctx.txt;\
-        goto *jtab[uint8_t(op->opcode)];
+        op   += 1;\
+        opd   = (VmOpData*)op;\
+        opr   = (VmOpReg*)op;\
+        oprd  = (VmOpRegData*)op;\
+        oprr  = (VmOpRegReg*)op;\
+        oprrd = (VmOpRegRegData*)op;\
+        oprdr = (VmOpRegDataReg*)op;\
+        goto *jtab[op->opcode];
 
-    #define BINARY_OP(op_)\
-        ctx.push(ctx.pop() op_ ctx.pop());
-
-    #define UNARY_OP(op_)\
-        ctx.push(op_ ctx.pop());
+    #define DISPATCH_BIGOP(op_)\
+        op    = (VmOp*)(op_->next);\
+        opd   = (VmOpData*)op;\
+        opr   = (VmOpReg*)op;\
+        oprd  = (VmOpRegData*)op;\
+        oprr  = (VmOpRegReg*)op;\
+        oprrd = (VmOpRegRegData*)op;\
+        oprdr = (VmOpRegDataReg*)op;\
+        goto *jtab[op->opcode];
 
     DISPATCH();
 
-op_push: ctx.push(op->data); DISPATCH();
-op_pop:  ctx.pop();          DISPATCH();
 
-op_pushn: ctx.rsp += op->data; DISPATCH();
-op_popn:  ctx.rsp -= op->data; DISPATCH();
+op_nop:     DISPATCH();
+op_movrd: { BINARY_RD(=) DISPATCH_BIGOP(oprd); }
+op_movrr: { BINARY_RR(=) DISPATCH_BIGOP(oprr); }
 
-op_addu: op_addi: BINARY_OP(+); DISPATCH();
-op_subu: op_subi: BINARY_OP(-); DISPATCH();
-op_mulu: op_muli: BINARY_OP(*); DISPATCH();
-op_divu: op_divi: BINARY_OP(/); DISPATCH();
+op_movrrd: {
+    auto off = ctx.regs[oprrd->idxB] + packU64(oprrd->data);
+    ctx.regs[oprrd->idxA] = ctx.stack[off];
+}   DISPATCH_BIGOP(oprrd);
 
-op_and: BINARY_OP(&); DISPATCH();
-op_or:  BINARY_OP(|); DISPATCH();
-op_xor: BINARY_OP(^); DISPATCH();
+op_movrdr: {
+    auto off = ctx.regs[oprdr->idxA] + packU64(oprdr->data);
+    ctx.stack[off] = ctx.regs[oprdr->idxB];
+}   DISPATCH_BIGOP(oprdr);
 
-op_neg: UNARY_OP(-);  DISPATCH();
-op_not: UNARY_OP(!);  DISPATCH();
+op_pushd: {
+    ctx.push(packU64(opd->data));
+}   DISPATCH_BIGOP(opd);
 
-op_jmp:  ctx.rip  = ctx.pop(); DISPATCH();
-op_rjmp: ctx.rip += ctx.pop(); DISPATCH();
-
-op_call: {
-    // uint64_t x = ctx.pop();
-    // ctx.push(ctx.rbp);
-    // ctx.push(ctx.rip);
-    // ctx.rbp = ctx.rsp;
-    // ctx.jmp(x);
+op_pop: {
+    ctx.pop();
 }   DISPATCH();
 
-op_ret:
-    // ctx.rsp = ctx.rbp;
-    // ctx.rip = ctx.pop();
-    // ctx.rbp = ctx.pop();
-    // DISPATCH();
+op_pushr: {
+    ctx.push(ctx.regs[opr->idx]);
+}   DISPATCH_BIGOP(opr);
+
+op_popr: {
+    ctx.regs[opr->idx] = ctx.pop();
+}   DISPATCH_BIGOP(opr);
+
+op_pushrd: {
+    auto off = ctx.regs[oprd->idx] + packU64(oprd->data);
+    ctx.push(ctx.stack[off]);
+}   DISPATCH_BIGOP(oprd);
+
+op_addrd: { BINARY_RD(+=); DISPATCH_BIGOP(oprd); }
+op_subrd: { BINARY_RD(-=); DISPATCH_BIGOP(oprd); }
+op_mulrd: { BINARY_RD(*=); DISPATCH_BIGOP(oprd); }
+op_divrd: { BINARY_RD(/=); DISPATCH_BIGOP(oprd); }
+op_andrd: { BINARY_RD(&) DISPATCH_BIGOP(oprd); }
+op_orrd:  { BINARY_RD(|) DISPATCH_BIGOP(oprd); }
+op_xorrd: { BINARY_RD(^) DISPATCH_BIGOP(oprd); }
+
+op_addrr: { BINARY_RR(+=); DISPATCH_BIGOP(oprr); }
+op_subrr: { BINARY_RR(-=); DISPATCH_BIGOP(oprr); }
+op_mulrr: { BINARY_RR(*=); DISPATCH_BIGOP(oprr); }
+op_divrr: { BINARY_RR(/=); DISPATCH_BIGOP(oprr); }
+op_andrr: { BINARY_RR(&) DISPATCH_BIGOP(oprr); }
+op_orrr:  { BINARY_RR(|) DISPATCH_BIGOP(oprr); }
+op_xorrr: { BINARY_RR(^) DISPATCH_BIGOP(oprr); }
+
+op_adds: { BINARY_OP(+); DISPATCH(); }
+op_subs: { BINARY_OP(-); DISPATCH(); }
+op_muls: { BINARY_OP(*); DISPATCH(); }
+op_divs: { BINARY_OP(/); DISPATCH(); }
+op_ands: { BINARY_OP(&); DISPATCH(); }
+op_ors:  { BINARY_OP(|); DISPATCH(); }
+op_xors: { BINARY_OP(^); DISPATCH(); }
+
+op_jmpd: {
+    ctx.rip = packU64(opd->data);
+}   DISPATCH();
+
+op_jmpr: {
+    ctx.rip = ctx.regs[opr->idx];
+}   DISPATCH();
+
+op_rjmpd: {
+    ctx.rip += packU64(opd->data);
+}   DISPATCH();
+
+op_rjmpr: {
+    ctx.rip += ctx.regs[opr->idx];
+}   DISPATCH();
+
+op_calld: {
+    ctx.push(ctx.rbp);
+    ctx.rbp = ctx.rsp;
+    ctx.rip = packU64(opd->data);
+}   DISPATCH();
+
+op_callr: {
+    ctx.push(ctx.rbp);
+    ctx.rbp = ctx.rsp;
+    ctx.rip = ctx.regs[opr->idx];
+}   DISPATCH();
+
+op_ret: {
+    if (ctx.rbp == 0)
+        goto op_exit;
+    ctx.rsp = ctx.rbp;
+    ctx.rbp = ctx.pop();
+}   DISPATCH();
 
 op_exit:
     return ctx.top();
 
-op_print: {
-    uint64_t argc = ctx.pop();
-    for (uint64_t i=0; i<argc; i++)
-        printf("%lu ", ctx.pop());
-}   DISPATCH();
+// op_print: {
+//     uint64_t argc = ctx.pop();
+//     for (uint64_t i=0; i<argc; i++)
+//         printf("%lu ", ctx.pop());
+// }   DISPATCH();
 
 op_error:
+    printf("[op_error] op=%u\n", op->opcode);
     return -1;
 
     #undef DISPATCH
@@ -107,95 +210,3 @@ op_error:
     #undef UNARY_OP
 }
 
-
-
-
-
-// uint8_t *cish::VmCtx::next()
-// {
-//     VmOp     *op  = (VmOp*)rip;
-//     uint64_t *dst = getDst();
-//     uint64_t  src = getSrc();
-
-//     switch (op->opcode)
-//     {
-//         case VmOp_mov: *dst  = src; break;
-//         case VmOp_add: *dst += src; break;
-//         case VmOp_sub: *dst -= src; break;
-//         case VmOp_mul: *dst *= src; break;
-//         case VmOp_div: *dst /= src; break;
-//         case VmOp_and: *dst &= src; break;
-//         case VmOp_or:  *dst |= src; break;
-//         case VmOp_xor: *dst ^= src; break;
-
-//         case VmOp_push: *(rsp++) = src;  break;
-//         case VmOp_pop:  *dst = *(--rsp); break;
-
-//         case VmOp_jmp:  rip = (uint8_t*)src; break;
-
-//         case VmOp_call:
-//             *(rsp++) = ((uint64_t)rip)+1; // push rip
-//             rbp = (uint64_t)rsp;          // save rsp
-//             rip = (uint8_t*)src;          // jmp
-//             break;
-
-//         case VmOp_ret:
-//             rsp = (uint64_t*)rbp;         // load rsp
-//             rip = (uint8_t*)(*(--rsp));   // pop rip
-//             break;
-
-//         case VmOp_exit: rip = nullptr; break;
-//     }
-
-//     return (uint8_t*)op;
-// }
-
-
-
-
-// cish::VmCtx::VmCtx( uint64_t *s )
-// :   rsp(s)
-// {
-    
-// }
-
-
-// uint64_t *cish::VmCtx::getDst()
-// {
-//     VmOp *op     = (VmOp*)rip;
-//     auto *as_u8  = (uint8_t*)rip;
-//     auto *as_u64 = (uint64_t*)rip;
- 
-//     if (op->dstIsReg)
-//     {
-//         uint8_t regIdx = as_u8[1];
-//         return &regs[regIdx];
-//     }
-
-//     else
-//     {
-//         uint64_t addr = as_u64[1];
-//         return (uint64_t*)addr;
-//     }
-// }
-
-
-// uint64_t cish::VmCtx::getSrc()
-// {
-//     VmOp *op     = (VmOp*)rip;
-//     auto *as_u8  = (uint8_t*)rip;
-//     auto *as_u64 = (uint64_t*)rip;
-
-//     if (op->srcIsReg)
-//     {
-//         uint8_t regIdx = as_u8[1];
-//         return regs[regIdx];
-//     }
-
-//     else
-//     {
-//         return as_u64[1];
-//     }
-// }
-
-    

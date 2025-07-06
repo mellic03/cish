@@ -268,4 +268,3 @@ struct AstReturn: AstNode
 
     virtual void accept( AstVisitor *V ) final { V->visitReturn(this); };
 };
-

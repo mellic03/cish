@@ -1,8 +1,5 @@
-// print(100 * (10-8));
-// print(1, print(42), 3);
-// print();
-return 1*1 + 2 + 3;
-
+let i64 X;
+return (2*10) + 2 + 3;
 
 // let i64 X = (4 + 6) / 2;
 

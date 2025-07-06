@@ -2,12 +2,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-struct AstNode;
+#include <cish/node.hpp>
 
 namespace cish
 {
-    uint8_t *assemble( AstNode *ast, uint64_t *buf, size_t bufsz );
+    uint32_t *assemble( AstNode *ast, uint32_t *buf, size_t bufsz );
 
 }
 

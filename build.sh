@@ -7,7 +7,8 @@ g++ \
     -g -std=c++23 \
     -I ./include/ \
     src/main.cpp \
-    src/assembler/assembler.cpp \
+    src/assembler/assembler2.cpp \
+    src/assembler/symtab.cpp \
     src/cish/compile.cpp \
     src/cish/keyword.cpp \
     src/cish/node.cpp \
@@ -15,8 +16,7 @@ g++ \
     src/cish/token.cpp \
     src/lexer/lexer.cpp \
     src/lexer/lexer-state.cpp \
-    src/parser/parser.cpp \
-    src/interpret/interpret.cpp \
+    src/parser/parser2.cpp \
     src/vm/vm.cpp \
     -o cish
 
