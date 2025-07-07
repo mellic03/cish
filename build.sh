@@ -7,16 +7,17 @@ g++ \
     -g -std=c++23 \
     -I ./include/ \
     src/main.cpp \
-    src/assembler/assembler2.cpp \
-    src/assembler/symtab.cpp \
-    src/cish/compile.cpp \
+    src/compile/compile-ctx.cpp \
+    src/compile/compile.cpp \
+    src/compile/pass1.cpp \
+    src/compile/pass2.cpp \
+    src/compile/print.cpp \
     src/cish/keyword.cpp \
-    src/cish/node.cpp \
-    src/cish/symtab.cpp \
     src/cish/token.cpp \
-    src/lexer/lexer.cpp \
     src/lexer/lexer-state.cpp \
-    src/parser/parser2.cpp \
+    src/lexer/lexer.cpp \
+    src/parser/parser.cpp \
+    src/vm/ctx.cpp \
     src/vm/vm.cpp \
     -o cish
 

@@ -1,196 +1,135 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 namespace cish
 {
-    enum VmOp_: uint64_t
+    enum VmOp_: uint8_t
     {
         VmOp_nop,
 
-        // VmOp_xxrd:  mov <A>, data
-        // VmOp_xxrr:  mov <A>, <B>
-        // VmOp_xxrrd: mov <A>, stack[<B> + data]
-        // VmOp_xxrdr: mov stack[<A> + data], <B>
+        // VmOp_stor32rr, // mov [rsp + <A>], <B>
+        // VmOp_stor32rd, // mov [rsp + <A>], d32
+        // VmOp_load32rr, // mov <A>, [rsp + <B>]
+        // VmOp_load32rd, // mov <A>, [rsp + d32]
+        // VmOp_stor, // mov [rsp + <A>], <B>
+        // VmOp_load, // mov <A>, [rsp + <B>]
 
-        VmOp_movrd, VmOp_movrr, VmOp_movrrd, VmOp_movrdr,
-        VmOp_pushd, VmOp_pop,   VmOp_pushr,  VmOp_popr,
-        VmOp_pushrd,
-    
-        VmOp_addrd, VmOp_subrd, VmOp_mulrd,  VmOp_divrd,
-        VmOp_andrd, VmOp_orrd,  VmOp_xorrd,
 
-        VmOp_addrr, VmOp_subrr, VmOp_mulrr,  VmOp_divrr,
-        VmOp_andrr, VmOp_orrr,  VmOp_xorrr,
+        // VmOp_vstor32rr, // mov [varstack + <A>], <B>
+        // VmOp_vstor32rd, // mov [varstack + <A>], d32
+        // VmOp_vload32rr, // mov <A>, [varstack + <B>]
+        // VmOp_vload32rd, // mov <A>, [varstack + d32]
+        VmOp_vstor,
+        VmOp_vload,
+        VmOp_vpush32d,
+        VmOp_vpop32r,
+        // VmOp_vpushrd, VmOp_vpush08, VmOp_vpush16, VmOp_vpush32,
+        // VmOp_vpoprg,  VmOp_vpop08,  VmOp_vpop16,  VmOp_vpop32, 
 
-        VmOp_adds,  VmOp_subs,  VmOp_muls,   VmOp_divs,
-        VmOp_ands,  VmOp_ors,   VmOp_xors,
+        VmOp_movrg, VmOp_mov08, VmOp_mov16, VmOp_mov32,
+        VmOp_addrg, VmOp_add08, VmOp_add16, VmOp_add32,
+        VmOp_subrg, VmOp_sub08, VmOp_sub16, VmOp_sub32,
+        VmOp_mulrg, VmOp_mul08, VmOp_mul16, VmOp_mul32,
+        VmOp_divrg, VmOp_div08, VmOp_div16, VmOp_div32,
 
-        VmOp_jmpd,  VmOp_jmpr,  VmOp_rjmpd,  VmOp_rjmpr,
-        VmOp_calld, VmOp_callr, VmOp_ret,
+        VmOp_push08r, VmOp_push16r, VmOp_push32r,
+        VmOp_push08d, VmOp_push16d, VmOp_push32d,
+        VmOp_pop08r,  VmOp_pop16r,  VmOp_pop32r,
+        VmOp_swap08,  VmOp_swap16, VmOp_swap32,
 
-        // VmOp_addu, VmOp_subu, VmOp_mulu,  VmOp_divu,
-        // VmOp_addi, VmOp_subi, VmOp_muli,  VmOp_divi,
-        // VmOp_and,  VmOp_or,   VmOp_xor,
-        // VmOp_neg,  VmOp_not,
-        // VmOp_jmp,  VmOp_rjmp,
-        // VmOp_call, VmOp_ret,
+        VmOp_add,  // push( pop() + pop() )
+        VmOp_sub,
+        VmOp_mul,
+        VmOp_div,
+        VmOp_and,
+        VmOp_or,
+        VmOp_xor,
+        VmOp_not,  // push( ~pop() )
+        VmOp_neg,  // push( 1 - pop() )
 
+        VmOp_equ,  // push( pop() == pop() )
+        VmOp_les,  // push( pop() <  pop() )
+        VmOp_leq,  // push( pop() <= pop() )
+        VmOp_gtr,  // push( pop() >  pop() )
+        VmOp_geq,  // push( pop() >= pop() )
+
+        VmOp_jmp,  // jmp dataw --> mov rip, dataw
+        VmOp_jeq,  // jmp dataw if [rsp-1] == [rsp-2]
+        VmOp_jne,  // jmp dataw if [rsp-1] != [rsp-2]
+
+        VmOp_rjmp, // rjmp dataw --> add rip, dataw
+        VmOp_rjeq,
+        VmOp_rjne,
+
+        VmOp_call,
+        VmOp_ret,
         VmOp_exit,
 
-        // VmOp_print,
-
         VmOp_NumOps,
-    };
-
-    union VmOpU64LoHi
-    {
-        uint64_t u64;
-        struct {
-            uint32_t lo;
-            uint32_t hi;
-        };
-    };
-
-    struct VmOpU64
-    {
-        uint32_t lo;
-        uint32_t hi;
-
-        VmOpU64( uint64_t value )
-        {
-            VmOpU64LoHi U = {value};
-            this->lo = U.lo;
-            this->hi = U.hi;
-        }
-    };
-
-    struct VmOpData
-    {
-        VmOpData( uint64_t value )
-        :   data(value) {  }
-
-        uint8_t opcode;
-        uint8_t B1;
-        uint8_t B2;
-        uint8_t B3;
-        VmOpU64 data;
-        uint32_t next[];
-    };
-
-    struct VmOpReg
-    {
-        VmOpReg( uint8_t regIdx )
-        :   idx(regIdx) {  }
-
-        uint8_t opcode;
-        uint8_t idx;
-        uint8_t B2;
-        uint8_t B3;
-        uint32_t next[];
-    };
-
-
-    struct VmOpRegData
-    {
-        VmOpRegData( uint8_t regIdx, uint64_t value )
-        :   idx(regIdx), data(value) {  }
-
-        uint8_t opcode;
-        uint8_t idx;
-        uint8_t B2;
-        uint8_t B3;
-        VmOpU64 data;
-        uint32_t next[];
-    };
-
-
-    struct VmOpRegReg
-    {
-        VmOpRegReg( uint8_t regA, uint8_t regB )
-        :   idxA(regA), idxB(regB) {  }
-
-        uint8_t opcode;
-        uint8_t idxA;
-        uint8_t idxB;
-        uint8_t B3;
-        uint32_t next[];
-    };
-
-
-    struct VmOpRegRegData
-    {
-        VmOpRegRegData( uint8_t regA, uint8_t regB, uint64_t value )
-        :   idxA(regA), idxB(regB), data(value) {  }
-
-        uint8_t opcode;
-        uint8_t idxA;
-        uint8_t idxB;
-        uint8_t B3;
-        VmOpU64 data;
-        uint32_t next[];
-    };
-
-    struct VmOpRegDataReg
-    {
-        VmOpRegDataReg( uint8_t regA, uint64_t value, uint8_t regB )
-        :   idxA(regA), idxB(regB), data(value) {  }
-
-        uint8_t opcode;
-        uint8_t idxA;
-        uint8_t idxB;
-        uint8_t B3;
-        VmOpU64 data;
-        uint32_t next[];
     };
 
 
     struct VmOp
     {
-        uint8_t opcode;
-        uint8_t B1;
-        uint8_t B2;
-        uint8_t B3; // 4 bytes
-        uint32_t next[];
-    };
+        struct {
+            uint8_t opcode;
+            uint8_t regA;
+            uint8_t regB;
+            uint8_t B3;
+        };
+    
+        union {
+            uint8_t  d08;
+            uint16_t d16;
+            uint32_t d32;
+            uint32_t data;
+        };
 
-    // template <typename T>
-    // VmOp newVmOp( uint8_t opcode, const T &data )
-    // {
-    //     VmOp op = {opcode};
-    //     new (op) T(data);
-    //     return op;
-    // }
+        VmOp( VmOp_ type, uint8_t A, uint8_t B, uint32_t value )
+        :   opcode(type), regA(A), regB(B), data(value) {  }
 
-    // union VmOp
-    // {
-    //     uint64_t qword;
+        VmOp( VmOp_ type, uint32_t value=0 )
+        :   VmOp(type, 0, 0, value) {  }
 
-    //     struct
-    //     {
-    //         uint8_t opcode;
-    //         uint8_t resv0;
-    //         uint8_t resv1;
-    //         uint8_t resv2;
-    //         uint32_t data;
-    //     };
+        VmOp( VmOp_ type, uint8_t A, uint8_t B )
+        :   VmOp(type, A, B, 0) {  }
 
-    //     // struct
-    //     // {
-    //     //     uint8_t opcode :7;
-    //     //     uint8_t sign   :1;
-    //     //     // uint8_t big    :1;
-    //     //     // uint8_t dstIsReg :1;
-    //     //     // uint8_t srcIsReg :1;
-    //     //     uint8_t B1;
-    //     //     uint8_t B2;
-    //     //     uint8_t B3;
-    //     //     uint32_t data;
+    } __attribute__((aligned(4)));
 
-    //     // } __attribute__((packed));
 
-    // } __attribute__((packed)) __attribute__((aligned(8)));
+    inline constexpr
+    VmOp VmOpReg( VmOp_ type, uint8_t A )
+    {
+        return VmOp(type, A, 0, 0);
+    }
+
+    inline constexpr
+    VmOp VmOpRegReg( VmOp_ type, uint8_t A, uint8_t B )
+    {
+        return VmOp(type, A, B, 0);
+    }
+
+    inline constexpr
+    VmOp VmOpData( VmOp_ type, uint32_t value )
+    {
+        return VmOp(type, 0, 0, value);
+    }
+
+    inline constexpr
+    VmOp VmOpRegData( VmOp_ type, uint8_t A, uint32_t value )
+    {
+        return VmOp(type, A, 0, value);
+    }
+
+    inline constexpr
+    VmOp VmOpRegRegData( VmOp_ type, uint8_t A, uint8_t B, uint32_t value )
+    {
+        return VmOp(type, A, B, value);
+    }
 
 }
 

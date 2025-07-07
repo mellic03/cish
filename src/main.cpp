@@ -12,12 +12,13 @@
 #include <cish/symtab.hpp>
 #include <cish/lexer.hpp>
 #include "parser/parser.hpp"
-#include "assembler/assembler.hpp"
 #include "vm/bytecode.hpp"
 #include "vm/vm.hpp"
 
 
 #include "../include/mpc.h"
+
+extern void printAst( cish::AstNode* );
 
 
 int main( int argc, char **argv )
@@ -69,13 +70,13 @@ int main( int argc, char **argv )
     std::cout << "----------------------------------------\n\n";
 
 
-    std::cout << "---------------- ASSEMBLER -------------\n";
-    uint32_t *program = new uint32_t[1024];
-    cish::assemble(ast, program, 2048);
+    std::cout << "---------------- COMPILER --------------\n";
+    uint32_t program[512];
+    cish::compile(ast, program, sizeof(program));
     std::cout << "----------------------------------------\n\n";
 
     std::cout << "---------------- EXEC ------------------\n";
-    int res = cish::exec(program, 2048);
+    int res = cish::exec(program, sizeof(program));
     std::cout << "res: " << res << "\n";
     std::cout << "----------------------------------------\n\n";
 

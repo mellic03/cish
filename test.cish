@@ -1,7 +1,20 @@
-let i64 X;
-return (2*10) + 2 + 3;
+func u08 woopee()
+{
+    return 1111;
+}
 
-// let i64 X = (4 + 6) / 2;
+func i32 testFunction( i32 x, i32 y )
+{
+    return 2222;
+}
+
+func i32 main()
+{
+    let i32 X = 12;
+    let i32 A = 50;
+    let i32 B = 25;
+    return (A-X) + B + woopee();
+}
 
 
 // Bitch = 5 + 3 * 4 / (2 + 1);

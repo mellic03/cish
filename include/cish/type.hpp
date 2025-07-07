@@ -25,7 +25,7 @@ struct cish::Type { enum ____: uint32_t
     KwdLet, KwdConst,
     KwdIf,  KwdElse,
     KwdFor, KwdWhile,
-    KwdFunction, KwdReturn,
+    KwdFunc, KwdReturn,
     Kwd_END,
 
     Identifier,
@@ -92,7 +92,7 @@ struct cish::Type { enum ____: uint32_t
         {"let", KwdLet}, {"const", KwdConst},
         {"if",  KwdIf},  {"else",  KwdElse}, 
         {"for", KwdFor}, {"while", KwdWhile},
-        {"function", KwdFunction}, {"return", KwdReturn},
+        {"func", KwdFunc}, {"return", KwdReturn},
     };
 
     static constexpr KeyPair OpTypes[] = {

@@ -31,7 +31,10 @@ private:
     AstNode *ProdBlock();
     AstNode *ProdTypeName();
     AstNode *ProdCond();
-    AstNode *ProdDecl();
+    AstNode *ProdVar();
+    AstNode *ProdFun();
+    AstNode *ProdFunArgs();
+    AstNode *ProdTypeIdnt();
     AstNode *ProdScope();
 
     AstNode *ProdExpr();

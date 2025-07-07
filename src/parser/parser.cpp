@@ -1,5 +1,4 @@
 #include "parser.hpp"
-#include "astnode.hpp"
 #include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
@@ -8,10 +7,20 @@ using namespace cish;
 
 
 
-
-
 /*
     <program>   ::= <stmnt>*
+    <stmnt>     ::= (<decl> | <assign> | <expr>) ";"
+
+    <decl>      ::= <vardecl> | <fundecl>
+    <vardecl>   ::= type idnt
+    <fundecl>   ::= type idnt "(" <argdecl>? ")"
+    <argdecl>   ::= type idnt ("," <argdecl>)*
+
+    <assign>    ::= idnt "=" <expr>
+
+    <call>      ::= <primary> "(" <args>? ")"
+    <args>      ::= <expr> ("," <expr>)*
+
     <expr>      ::= <term> ((/|*|-|+) <expr>)*
     <term>      ::= idnt | string | number | <expr>
 */
@@ -22,15 +31,15 @@ AstNode *cish::Parser::buildPT( Token *buf )
 {
     m_prev = nullptr;
     m_curr = buf;
-    auto *root = new AstGroup();
+    auto *root = newNode(AstList());
 
     while (!isAtEnd())
     {
-        root->push(ProdStmnt());
+        root->as_List.push(ProdStmnt());
     }
 
-    AstPrint AP;
-    AP.visit(root);
+    // AstPrint AP;
+    // AP.visit(root);
 
     return root;
 }
@@ -87,8 +96,10 @@ static bool is_typename( uint32_t tp )
 
 AstNode *cish::Parser::ProdStmnt()
 {
-    // if (check(Type::KwdLet))
-    //     return ProdDecl();
+    if (check(Type::KwdLet))
+        return ProdVar();
+    if (check(Type::KwdFunc))
+        return ProdFun();
     if (check(Type::KwdReturn))
         return ProdReturn();
     if (check(Type::KwdIf, Type::KwdWhile))
@@ -98,38 +109,95 @@ AstNode *cish::Parser::ProdStmnt()
 
 
 
-// AstNode *cish::Parser::ProdDecl()
-// {
-//     Token *kwtok = consume(Type::KwdLet);
+AstNode *cish::Parser::ProdVar()
+{
+    Token *kwtok = consume(Type::KwdLet);
 
-//     if (!is_typename(peek()))
-//         consume(Type::Error, "Expected typename after \"let\"");
+    if (!is_typename(peek()))
+        consume(Type::Error, "Expected typename after \"let\"");
 
-//     Token *tptok = advance();
-//     Token *idtok = consume(Type::Identifier, "Expected <identifier> after \"let %s\"", tptok->lexeme);
-//     AstNode *idnt = new AstVariable(tptok, idtok);
-//     AstNode *decl = new AstDecl(kwtok, idnt);
+    Token  *tptok = advance();
+    Token  *idtok = consume(Type::Identifier, "Expected <identifier> after \"let %s\"", tptok->lexeme);
+    AstNode *idnt = newNode(AstVar(idtok));
+    AstNode *decl = newNode(AstVarDecl(tptok, idtok)); // AstVarDecl(kwtok, newNode(AstType(tptok))));
 
-//     if (match(Type::SemiColon))
-//         return decl;
+    if (match(Type::SemiColon))
+        return decl;
 
-//     consume(Type::Equal, "Expected \"=\" after \"let <identifier>\"");
-//     AstNode *vrbl = new AstVariable(tptok, idtok);
-//     AstNode *expr = new AstAssign(vrbl, ProdExprStmnt());
+    consume(Type::Equal, "Expected \"=\" after \"let <identifier>\"");
+    AstNode *expr = newNode(AstAssign(idtok, ProdExprStmnt()));
 
-//     auto *group = new AstGroup(decl, expr);
-//     group->m_woop = false;
+    return newNode(AstList(decl, expr));
+}
 
-//     return group;
-// }
+
+AstNode *cish::Parser::ProdFun()
+{
+    Token *kwtok = consume(Type::KwdFunc);
+
+    if (!is_typename(peek()))
+        consume(Type::Error, "Expected typename after \"func\"");
+
+    Token   *rtyp = advance();
+    Token   *idnt = consume(Type::Identifier, "Expected <identifier> after \"func %s\"", rtyp->lexeme);
+
+    consume(Type::LeftParen);
+    AstNode *args = ProdFunArgs();
+
+    consume(Type::LeftBrace);
+    AstNode *body = newNode(AstList());
+    while (!match(Type::RightBrace))
+        body->as_List.push(ProdStmnt());
+    // consume(Type::RightBrace);
+
+    return newNode(AstFunDecl(idnt, rtyp, args, body));
+}
+
+
+AstNode *cish::Parser::ProdFunArgs()
+{
+    AstNode *list = newNode(AstList());
+
+    if (match(Type::RightParen))
+        return list;
+
+    while (true)
+    {
+        list->as_List.push(ProdTypeIdnt());
+        if (!match(Type::Comma))
+            break;
+    }
+    consume(Type::RightParen);
+
+    return list;
+}
+
+
+AstNode *cish::Parser::ProdTypeIdnt()
+{
+    if (!is_typename(peek()))
+    {
+        consume(Type::Error, "Expected typename, received \"%s\"", m_curr->lexeme);
+        return nullptr;
+    }
+
+    Token *tptok = advance();
+    Token *idtok = match(Type::Identifier);
+
+    return newNode(AstVarDecl(tptok, idtok));
+}
+
+
+
+
 
 
 AstNode *cish::Parser::ProdReturn()
 {
     Token *kwtok = consume(Type::KwdReturn);
     if (Token *tok = match(Type::SemiColon))
-        return new AstReturn(new AstNumber());
-    return new AstReturn(ProdExprStmnt());
+        return newNode(AstReturn(newNode(AstNumber())));
+    return newNode(AstReturn(ProdExprStmnt()));
 }
 
 
@@ -142,7 +210,7 @@ AstNode *cish::Parser::ProdCond()
         consume(Type::LeftParen);
         AstNode *expr = ProdExpr();
         consume(Type::RightParen);
-        return new AstCond(kwd, expr, ProdScope());
+        return newNode(AstCond(kwd, expr, ProdScope()));
     }
 
     consume(Type::Error, "Should be unreachable!");
@@ -152,10 +220,10 @@ AstNode *cish::Parser::ProdCond()
 
 AstNode *cish::Parser::ProdScope()
 {
-    auto *group = new AstGroup();
+    auto *group = newNode(AstList());
     consume(Type::LeftBrace);
     while (!isAtEnd() && !match(Type::RightBrace))
-        group->push(ProdStmnt());
+        group->as_List.push(ProdStmnt());
     return group;
 }
 
@@ -192,18 +260,18 @@ Token *cish::Parser::ProdOperator( uint8_t p, bool &is_right )
     size_t idx   = (p<njmps) ? p : njmps-1;
     goto *jmp[idx];
 
-    #define OP_L(...) if (auto *tok=match(__VA_ARGS__)) { is_right=false; return tok; }
+    #define OP_L(...) if (auto *tok=match(__VA_ARGS__)) { return tok; }
     #define OP_R(...) if (auto *tok=match(__VA_ARGS__)) { is_right=true;  return tok; }
 
     P0: 
-    P1:  OP_L( Type::Bang, Type::Tilde )
-    P2:  OP_L( Type::Star, Type::Slash )
-    P3:  OP_L( Type::Plus, Type::Minus )
+    P1:  OP_L( Type::Equal )
+    P2:  OP_L( Type::AmpAmpsnd, Type::BarBar )
+    P3:  OP_L( Type::Ampsnd, Type::Hat, Type::Bar )
     P4:  OP_L( Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual,
                Type::EqualEqual, Type::BangEqual )
-    P5:  OP_L( Type::Ampsnd, Type::Hat, Type::Bar )
-    P6:  OP_L( Type::AmpAmpsnd, Type::BarBar )
-    P7:  OP_L( Type::Equal )
+    P5:  OP_L( Type::Plus, Type::Minus )
+    P6:  OP_L( Type::Star, Type::Slash )
+    P7:  OP_L( Type::Bang, Type::Tilde )
     P8:
     P9:
     P10: 
@@ -221,7 +289,7 @@ AstNode *cish::Parser::ProdPrecedence( uint8_t p )
     bool is_right = false;
     while (Token *tok = ProdOperator(p, is_right))
     {
-        expr = new AstBinary(expr, tok, ProdPrecedence(p+1));
+        expr = newNode(AstBinary(expr, tok, ProdPrecedence(p+1)));
         // if (is_right)
         //     expr = new AstBinary(ProdPrecedence(p), tok, expr);
         // else
@@ -235,7 +303,7 @@ AstNode *cish::Parser::ProdPostfix()
 {
     AstNode *expr = ProdPrefix();
     if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
-        expr = new AstPostfix(expr, op);
+        expr = newNode(AstPostfix(expr, op));
     return expr;
 }
 
@@ -243,13 +311,14 @@ AstNode *cish::Parser::ProdPostfix()
 AstNode *cish::Parser::ProdPrefix()
 {
     if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
-        return new AstPrefix(op, ProdPrimary());
+        return newNode(AstPrefix(op, ProdPrimary()));
 
     if (Token *op = match(Type::Bang, Type::Tilde, Type::Ampsnd, Type::Minus, Type::Plus))
-        return new AstPrefix(op, ProdPrimary());
+        return newNode(AstPrefix(op, ProdPrimary()));
 
     return ProdPrimary();
 }
+
 
 
 AstNode *cish::Parser::ProdList()
@@ -257,11 +326,11 @@ AstNode *cish::Parser::ProdList()
     if (match(Type::RightParen))
         return nullptr;
 
-    AstGroup *list = new AstGroup();
+    AstNode *list = newNode(AstList());
 
     while (true)
     {
-        list->push(ProdExpr());
+        list->as_List.push(ProdExpr());
         if (!match(Type::Comma))
             break;
     }
@@ -277,15 +346,15 @@ AstNode *cish::Parser::ProdPrimary()
     if (Token *tok = match(Type::Identifier))
     {
         if (match(Type::LeftParen))
-            return new AstFunctionCall(tok, ProdList());
-        return new AstVariable(tok);
+            return newNode(AstCall(tok, ProdList()));
+        return newNode(AstVar(tok));
     }
 
     // if (Token *tok = match(Type::String))
     //     return new AstString(tok);
 
     if (Token *tok = match(Type::Number))
-        return new AstNumber(tok);
+        return newNode(AstNumber(tok));
 
     if (Token *tok = match(Type::LeftParen))
     {
@@ -325,7 +394,7 @@ cish::Token *cish::Parser::expect( uint32_t type, const char *fmt, ... )
 
     va_list vlist;
     va_start(vlist, fmt);
-    fprintf(stderr, "[PARSE ERROR] ");
+    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_prev->lineno, m_prev->colno);
     vfprintf(stderr, fmt, vlist);
     fprintf(stderr, "\n");
     va_end(vlist);
@@ -342,7 +411,7 @@ cish::Token *cish::Parser::consume( uint32_t type, const char *fmt, ... )
 
     va_list vlist;
     va_start(vlist, fmt);
-    fprintf(stderr, "[PARSE ERROR] ");
+    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_prev->lineno, m_prev->colno);
     vfprintf(stderr, fmt, vlist);
     fprintf(stderr, "\n");
     va_end(vlist);

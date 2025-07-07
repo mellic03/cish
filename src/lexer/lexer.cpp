@@ -122,8 +122,13 @@ char cish::Lexer::advance()
     if (!isAtEnd())
         m_curr++;
 
-    // if (*m_prev != '\n')
-    //     printf("\'%c\'\n", *m_prev);
+    m_colno++;
+
+    if (*m_prev == '\n')
+    {
+        m_lineno++;
+        m_colno = 0;
+    }
 
     return *m_prev;
 
@@ -146,7 +151,7 @@ void cish::Lexer::emit( uint32_t type )
         m_lexbuf[0] = '\0';
 
     if (type != Type::None)
-        *(m_toktop++) = Token(type, m_lexbuf);
+        *(m_toktop++) = Token(type, m_lexbuf, m_lineno, m_colno);
 
     // printf("\'%c\' emit [%s] \"%s\" \n", *m_curr, TypeToStr(type), m_lexbuf);
 

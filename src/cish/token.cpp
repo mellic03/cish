@@ -16,3 +16,10 @@ cish::Token::Token( uint32_t tp, const char *str )
 }
 
 
+cish::Token::Token( uint32_t tp, const char *str, uint32_t line, uint32_t col )
+:   Token(tp, str)
+{
+    lineno = line;
+    colno  = col;
+}
+

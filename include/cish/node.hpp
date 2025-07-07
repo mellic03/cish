@@ -19,11 +19,11 @@ namespace cish
         Ast_Scope,
         Ast_Assign,
         Ast_Cond,
+        Ast_Call,
         Ast_Return,
         Ast_Type,
-        Ast_Decl,
-        Ast_Func,
-        Ast_Call,
+        Ast_VarDecl,
+        Ast_FunDecl,
         Ast_Var,
         Ast_String,
         Ast_Number,
@@ -44,12 +44,12 @@ namespace cish
     struct AstScope;
     struct AstAssign;
     struct AstCond;
+    struct AstCall;
     struct AstReturn;
 
     struct AstType;
-    struct AstDecl;
-    struct AstFunc;
-    struct AstCall;
+    struct AstVarDecl;
+    struct AstFunDecl;
 
     struct AstVar;
     struct AstString;
@@ -116,11 +116,11 @@ struct cish::AstScope: AstBase<Ast_Scope>
 
 struct cish::AstAssign: AstBase<Ast_Assign>
 {
-    AstNode *m_target;
+    const char *m_var;
     AstNode *m_expr;
 
-    AstAssign( AstNode *target, AstNode *expr )
-    :  m_target(target), m_expr(expr) {  }
+    AstAssign( Token *idnt, AstNode *expr )
+    :  m_var(idnt->lexeme), m_expr(expr) {  }
 };
 
 
@@ -131,6 +131,16 @@ struct cish::AstCond: AstBase<Ast_Cond>
 
     AstCond( Token *kwd, AstNode *cond, AstNode *body )
     :  m_kwd(kwd), m_cond(cond), m_body(body) {  }
+};
+
+
+struct cish::AstCall: AstBase<Ast_Call>
+{
+    const char *m_callee;
+    AstNode *m_expr;
+
+    AstCall( Token *callee, AstNode *expr )
+    :   m_callee(callee->lexeme), m_expr(expr) {  }
 };
 
 
@@ -145,42 +155,43 @@ struct cish::AstReturn: AstBase<Ast_Return>
 
 struct cish::AstType: AstBase<Ast_Type>
 {
-    const char *m_symkey;
+    const char *m_name;
     size_t m_size;
     size_t m_align;
 
+    AstType( const char *name, size_t size, size_t align )
+    :   m_name(name), m_size(size), m_align(align) {  }
+
     AstType( Token *idnt )
-    :   m_symkey(idnt->lexeme), m_size(8), m_align(8) {  }
+    :   m_name(idnt->lexeme), m_size(8), m_align(8) {  }
 };
 
 
-struct cish::AstDecl: AstBase<Ast_Decl>
+struct cish::AstVarDecl: AstBase<Ast_VarDecl>
 {
-    const char *m_symkey;
-    AstNode    *m_dtype;
+    const char *m_typename;
+    const char *m_name;
 
-    AstDecl( Token *idnt, AstNode *dtype )
-    :   m_symkey(idnt->lexeme), m_dtype(dtype) {  }
+    AstVarDecl( Token *tptok, Token *idtok )
+    :   m_typename(tptok->lexeme), m_name(idtok->lexeme) {  }
 };
 
 
-struct cish::AstFunc: AstBase<Ast_Func>
+struct cish::AstFunDecl: AstBase<Ast_FunDecl>
 {
-    const char *m_symkey;
+    const char *m_name;
+    const char *m_ret_typename;
+    AstNode *m_args;
     AstNode *m_body;
 
-    AstFunc( Token *name, AstNode *body )
-    :   m_symkey(name->lexeme), m_body(body) {  }
-};
+    AstFunDecl( Token *idnt, Token *rtype, AstNode *args, AstNode *body )
+    :   m_name(idnt->lexeme),
+        m_ret_typename(rtype->lexeme),
+        m_args(args),
+        m_body(body)
+    {
 
-
-struct cish::AstCall: AstBase<Ast_Call>
-{
-    const char *m_callee;
-    AstNode *m_expr;
-
-    AstCall( Token *callee, AstNode *expr )
-    :   m_callee(callee->lexeme), m_expr(expr) {  }
+    }
 };
 
 
@@ -227,11 +238,11 @@ struct cish::AstNode: knl::LinkedListNode
         AstScope    as_Scope;
         AstAssign   as_Assign;
         AstCond     as_Cond;
+        AstCall     as_Call;
         AstReturn   as_Return;
         AstType     as_Type;
-        AstDecl     as_Decl;
-        AstFunc     as_Func;
-        AstCall     as_Call;
+        AstVarDecl  as_VarDecl;
+        AstFunDecl  as_FunDecl;
         AstVar      as_Var;
         AstString   as_String;
         AstNumber   as_Number;
