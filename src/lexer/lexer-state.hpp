@@ -86,6 +86,7 @@ struct StateString: LexState<Type::String>
     virtual bool isTrigger( char ) final;
     virtual bool isTerminal( char ) final;
     virtual bool isInput( char ) final;
+    virtual void produce( cish::Lexer& ) final;
 };
 
 

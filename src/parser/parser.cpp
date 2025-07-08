@@ -350,8 +350,8 @@ AstNode *cish::Parser::ProdPrimary()
         return newNode(AstVar(tok));
     }
 
-    // if (Token *tok = match(Type::String))
-    //     return new AstString(tok);
+    if (Token *tok = match(Type::String))
+        return newNode(AstString(tok));
 
     if (Token *tok = match(Type::Number))
         return newNode(AstNumber(tok));
@@ -394,7 +394,7 @@ cish::Token *cish::Parser::expect( uint32_t type, const char *fmt, ... )
 
     va_list vlist;
     va_start(vlist, fmt);
-    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_prev->lineno, m_prev->colno);
+    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_curr->lineno, m_curr->colno);
     vfprintf(stderr, fmt, vlist);
     fprintf(stderr, "\n");
     va_end(vlist);
@@ -411,7 +411,7 @@ cish::Token *cish::Parser::consume( uint32_t type, const char *fmt, ... )
 
     va_list vlist;
     va_start(vlist, fmt);
-    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_prev->lineno, m_prev->colno);
+    fprintf(stderr, "[PARSE ERROR] line %u, col %u\n", m_curr->lineno, m_curr->colno);
     vfprintf(stderr, fmt, vlist);
     fprintf(stderr, "\n");
     va_end(vlist);

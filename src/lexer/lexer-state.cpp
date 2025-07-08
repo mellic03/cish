@@ -98,6 +98,34 @@ bool StateNumber::isInput( char ch )    { return isdigit(ch); }
 bool StateString::isTrigger( char ch )  { return ch == '\"'; }
 bool StateString::isTerminal( char ch ) { return ch == '\"'; }
 bool StateString::isInput( char ch )    { return ch != '\n'; }
+void StateString::produce( cish::Lexer &lex )
+{
+    int count = 0;
+
+    while (!lex.isAtEnd())
+    {
+        char ch = lex.advance();
+
+        if (ch == '\"')
+        {
+            count++;
+
+            if (count == 2)
+            {
+                lex.emit(Type::String);
+                return;
+            }
+        }
+    
+        else if (ch == '\n')
+        {
+            lex.emit(Type::Error);
+            return;
+        }
+    }
+}
+
+
 
 bool StateOperator::isTrigger( char ch ) { return isInput(ch); }
 bool StateOperator::isTerminal( char ch ) { return !isInput(ch); }

@@ -140,6 +140,7 @@ public:
     void pushScope();
     void popScope();
     StackFrame &topScope() { return m_frames.top(); }
+    StackFrame &globals() { return m_globals; }
 
     Symbol *findSymbol( const char *key );
 

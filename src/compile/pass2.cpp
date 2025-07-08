@@ -195,16 +195,15 @@ static void pass2_VarDecl( CompileCtx &ctx, AstVarDecl &N )
     sym = ctx.findSymbol(N.m_typename);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Type));
-
     SymType &tsym = sym->as_Type;
-    size_t addr = ctx.frameAlloc(tsym.size, 1);
-    ctx.emit(VmOpData(VmOp_vpush32d, tsym.size));
+    size_t addr = ctx.frameAlloc(tsym.size, tsym.align);
 
     sym = ctx.createSymbol(N.m_name, SymVar(N.m_typename, addr));
     assert((sym != nullptr));
     assert((sym->tag == Sym_Var));
     SymVar &vsym = sym->as_Var;
 
+    ctx.emit(VmOpData(VmOp_vpush32d, tsym.size));
     printf("%s %s, V[%lu]\n", N.m_typename, N.m_name, vsym.addr);
 }
 
@@ -225,9 +224,6 @@ static void pass2_FunDecl( CompileCtx &ctx, AstFunDecl &N )
     pass2(ctx, N.m_body);
     fsym.argc = N.m_args->as_List.size();
     ctx.popScope();
-
-    // ctx.emit(VmOp_movrg,  Reg_vsp, Reg_vbp); // mov rsp, rbp
-    // ctx.emit(VmOp_vpoprg, Reg_vbp);          // pop rbp
 }
 
 

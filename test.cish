@@ -13,16 +13,7 @@ func i32 main()
     let i32 X = 12;
     let i32 A = 50;
     let i32 B = 25;
+
     return (A-X) + B + woopee();
 }
 
-
-// Bitch = 5 + 3 * 4 / (2 + 1);
-// Y = 2*Bitch;
-// X = (Z = 2) - 5;
-// X = X & Y ^ Z | W;
-
-// let X = 2; // test comment let z = 14;
-// let Y = 5;
-// let abcd;
-// let Z = X + Y * (15 * X);
