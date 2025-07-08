@@ -127,10 +127,11 @@ struct cish::AstAssign: AstBase<Ast_Assign>
 struct cish::AstCond: AstBase<Ast_Cond>
 {
     Token *m_kwd;
-    AstNode *m_cond, *m_body;
+    AstNode *m_cond;
+    AstNode *m_if, *m_else;
 
-    AstCond( Token *kwd, AstNode *cond, AstNode *body )
-    :  m_kwd(kwd), m_cond(cond), m_body(body) {  }
+    AstCond( Token *kwd, AstNode *cond, AstNode *if_expr, AstNode *else_expr )
+    :  m_kwd(kwd), m_cond(cond), m_if(if_expr), m_else(else_expr) {  }
 };
 
 

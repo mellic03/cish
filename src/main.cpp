@@ -11,6 +11,7 @@
 #include <cish/interpret.hpp>
 #include <cish/symtab.hpp>
 #include <cish/lexer.hpp>
+#include "assembler/assembler.hpp"
 #include "parser/parser.hpp"
 #include "vm/bytecode.hpp"
 #include "vm/vm.hpp"
@@ -75,6 +76,7 @@ int main( int argc, char **argv )
     cish::compile(ast, program, sizeof(program));
     std::cout << "----------------------------------------\n\n";
 
+    cish::disassemble(program, 512*sizeof(uint32_t));
     std::cout << "---------------- EXEC ------------------\n";
     int res = cish::exec(program, sizeof(program));
     std::cout << "res: " << res << "\n";

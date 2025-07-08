@@ -28,15 +28,21 @@ static void pass1_List( CompileCtx &ctx, AstList &N )
     for (auto *child: N)
     {
         pass1(ctx, child);
+        if (child->type != Ast_List)
+            printf("\n");
     }
+
 }
 
 
 
 static void pass1_Binary( CompileCtx &ctx, AstBinary &N )
 {
+    printf("(");
     pass1(ctx, N.m_lhs);
+    printf(" %s ", N.m_tok->lexeme);
     pass1(ctx, N.m_rhs);
+    printf(")");
 }
 
 
@@ -64,6 +70,7 @@ static void pass1_Scope( CompileCtx &ctx, AstScope &N )
 
 static void pass1_Assign( CompileCtx &ctx, AstAssign &N )
 {
+    printf("%s = ", N.m_var);
     pass1(ctx, N.m_expr);
 }
 
@@ -77,31 +84,42 @@ static void pass1_Cond( CompileCtx &ctx, AstCond &N )
 
 static void pass1_Call( CompileCtx &ctx, AstCall &N )
 {
-    auto *sym = ctx.findSymbol(N.m_callee);
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Func));
+    printf("%s(", N.m_callee);
+    if (N.m_expr)
+        pass1(ctx, N.m_expr);
+    printf(")");
+
+    // Symtab &tab = ctx.getLocal();
+    // Symbol *sym = tab.find(N.m_callee);
+    // assert((sym != nullptr));
+    // assert((sym->tag == Sym_Func));
 }
 
 
 static void pass1_Return( CompileCtx &ctx, AstReturn &N )
 {
+    printf("return ");
     pass1(ctx, N.m_expr);
 }
 
 
 static void pass1_Type( CompileCtx &ctx, AstType &N )
 {
-
+    printf("%s", N.m_name);
 }
 
 
 static void pass1_VarDecl( CompileCtx &ctx, AstVarDecl &N )
 {
+    // printf("let %s %s", N.m_typename, N.m_name);
     // Symbol *sym = nullptr;
 
-    // sym = ctx.findSymbol(N.m_typename);
-    // assert((sym != nullptr));
-    // assert((sym->tag == Sym_Type));
+    Symtab &tab = ctx.getLocal();
+    Symbol *sym = tab.find(N.m_typename);
+    assert((sym != nullptr));
+    assert((sym->tag == Sym_Type));
+    SymType &tsym = sym->as_Type;
+    size_t addr = tab.frameAlloc(tsym.size, tsym.align);
 
     // SymType &tsym = sym->as_Type;
     // size_t  addr = ctx.frameAlloc(tsym.size, tsym.align);
@@ -111,12 +129,13 @@ static void pass1_VarDecl( CompileCtx &ctx, AstVarDecl &N )
 
     // SymVar &vsym = sym->as_Var;
 
-    // printf("%s %s, [vbp + %lu]\n", vsym.type_name, sym->key, vsym.addr);
+    // printf("let %s %s, [vbp + %lu]", N.m_typename, N.m_name, addr);
 }
 
 
 static void pass1_FunDecl( CompileCtx &ctx, AstFunDecl &N )
 {
+    printf("func %s %s()\n", N.m_ret_typename, N.m_name);
     // Symbol *sym = nullptr;
 
     // sym = ctx.createSymbol(N.m_name, SymFunc(N.m_ret_typename, 0));
@@ -124,13 +143,14 @@ static void pass1_FunDecl( CompileCtx &ctx, AstFunDecl &N )
     // assert((sym->tag == Sym_Func));
     // SymFunc &fsym = sym->as_Func;
 
-    // ctx.pushScope();
-    // pass1(ctx, N.m_args);
-    // pass1(ctx, N.m_body);
+    ctx.pushLocal();
+    pass1(ctx, N.m_args);
+    pass1(ctx, N.m_body);
     // fsym.argc = N.m_args->as_List.size();
     // fsym.resb = ctx.topScope().allocSize();
-    // ctx.popScope();
+    ctx.popLocal();
 
+    printf("endfunc\n");
     // printf(
     //     "%s %s(%lu), [%lu], resb %lu\n",
     //     fsym.return_type, sym->key, fsym.argc, fsym.addr, fsym.resb
@@ -147,6 +167,8 @@ static void pass1_Var( CompileCtx &ctx, AstVar &N )
 
     // ctx.emit(VmOp_vload32, Reg_rax, sym->addr);
     // ctx.emit(VmOp_pushrg, Reg_rax);
+
+    printf("%s", N.m_symkey);
 }
 
 
@@ -162,6 +184,7 @@ static void pass1_Number( CompileCtx &ctx, AstNumber &N )
 {
     int64_t value = atol(N.m_str);
     // ctx.emit(VmOp_push32, value);
+    printf("%ld", value);
 }
 
 

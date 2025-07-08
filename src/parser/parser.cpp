@@ -208,9 +208,12 @@ AstNode *cish::Parser::ProdCond()
     if (Token *kwd = match(Type::KwdIf, Type::KwdWhile))
     {
         consume(Type::LeftParen);
-        AstNode *expr = ProdExpr();
-        consume(Type::RightParen);
-        return newNode(AstCond(kwd, expr, ProdScope()));
+        AstNode *cond = ProdExpr();
+    
+        AstNode *ifBody   = ProdScope();
+        AstNode *elseBody = newNode(AstList()); // match(Type::KwdElse) ?  : newNode(AstList());
+
+        return newNode(AstCond(kwd, cond, ifBody, elseBody));
     }
 
     consume(Type::Error, "Should be unreachable!");
@@ -227,6 +230,7 @@ AstNode *cish::Parser::ProdScope()
     return group;
 }
 
+
 AstNode *cish::Parser::ProdExprStmnt()
 {
     AstNode *expr = ProdExpr();
@@ -237,88 +241,71 @@ AstNode *cish::Parser::ProdExprStmnt()
 
 AstNode *cish::Parser::ProdExpr()
 {
-    AstNode *expr = ProdPrecedence(0);
+    AstNode *expr = ProdPrecedence();
     return expr;
 }
 
 
-Token *cish::Parser::ProdOperator( uint8_t p, bool &is_right )
-{
-    const auto minfn = [](uint8_t x, uint8_t y ) { return (x < y) ? x : y; };
+// Token *cish::Parser::ProdOperator( uint8_t p, bool &is_right )
+// {
+//     const auto minfn = [](uint8_t x, uint8_t y ) { return (x < y) ? x : y; };
 
-    static constexpr
-    void *jmp[] = {
-        &&P0,  &&P1,  &&P2,  &&P3,
-        &&P4,  &&P5,  &&P6,  &&P7,
-        &&P8,  &&P9,  &&P10, &&P11,
-        &&P12, &&P13,
-        &&Px
-    };
+//     static constexpr
+//     void *jmp[] = {
+//         &&P0,  &&P1,  &&P2,  &&P3,
+//         &&P4,  &&P5,  &&P6,  &&P7,
+//         &&P8,  &&P9,  &&P10, &&P11,
+//         &&P12, &&P13,
+//         &&Px
+//     };
 
-    static constexpr
-    size_t njmps = sizeof(jmp)/sizeof(jmp[0]);
-    size_t idx   = (p<njmps) ? p : njmps-1;
-    goto *jmp[idx];
+//     static constexpr
+//     size_t njmps = sizeof(jmp)/sizeof(jmp[0]);
+//     size_t idx   = (p<njmps) ? p : njmps-1;
+//     goto *jmp[idx];
 
-    #define OP_L(...) if (auto *tok=match(__VA_ARGS__)) { return tok; }
-    #define OP_R(...) if (auto *tok=match(__VA_ARGS__)) { is_right=true;  return tok; }
+//     #define OP_L(...) if (Token *tok=match(__VA_ARGS__)) { is_right=false; return tok; }
+//     #define OP_R(...) if (Token *tok=match(__VA_ARGS__)) { is_right=true;  return tok; }
 
-    P0: 
-    P1:  OP_L( Type::Equal )
-    P2:  OP_L( Type::AmpAmpsnd, Type::BarBar )
-    P3:  OP_L( Type::Ampsnd, Type::Hat, Type::Bar )
-    P4:  OP_L( Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual,
-               Type::EqualEqual, Type::BangEqual )
-    P5:  OP_L( Type::Plus, Type::Minus )
-    P6:  OP_L( Type::Star, Type::Slash )
-    P7:  OP_L( Type::Bang, Type::Tilde )
-    P8:
-    P9:
-    P10: 
-    P11: 
-    P12: 
-    P13: 
-    Px:  return nullptr;
-    #undef IF_OP
-}
+//     P0: 
+//     P1:  OP_L( Type::Bang, Type::Tilde )
+//     P2:  OP_L( Type::Star, Type::Slash )
+//     P3:  OP_L( Type::Plus, Type::Minus )
+//     P4:  OP_L( Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual,
+//                Type::EqualEqual, Type::BangEqual )
+//     P5:  OP_L( Type::Ampsnd, Type::Hat, Type::Bar )
+//     P6:  OP_L( Type::AmpAmpsnd, Type::BarBar )
+//     P7:  OP_R( Type::Equal )
+//     P8:
+//     P9:
+//     P10: 
+//     P11: 
+//     P12: 
+//     P13: 
+//     Px:  return nullptr;
 
-
-AstNode *cish::Parser::ProdPrecedence( uint8_t p )
-{
-    auto *expr = ProdPostfix();
-    bool is_right = false;
-    while (Token *tok = ProdOperator(p, is_right))
-    {
-        expr = newNode(AstBinary(expr, tok, ProdPrecedence(p+1)));
-        // if (is_right)
-        //     expr = new AstBinary(ProdPrecedence(p), tok, expr);
-        // else
-        //     expr = new AstBinary(expr, tok, ProdPrecedence(p+1));
-    }
-    return expr;
-}
+//     #undef OP_L
+//     #undef OP_R
+// }
 
 
-AstNode *cish::Parser::ProdPostfix()
-{
-    AstNode *expr = ProdPrefix();
-    if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
-        expr = newNode(AstPostfix(expr, op));
-    return expr;
-}
+// AstNode *cish::Parser::ProdPrecedence( uint8_t p )
+// {
+//     AstNode *expr = ProdPrecA();
+//     // AstNode *expr = ProdPostfix();
+//     // bool is_right = false;
 
-
-AstNode *cish::Parser::ProdPrefix()
-{
-    if (Token *op = match(Type::MinusMinus, Type::PlusPlus))
-        return newNode(AstPrefix(op, ProdPrimary()));
-
-    if (Token *op = match(Type::Bang, Type::Tilde, Type::Ampsnd, Type::Minus, Type::Plus))
-        return newNode(AstPrefix(op, ProdPrimary()));
-
-    return ProdPrimary();
-}
-
+//     // while (Token *tok = ProdOperator(p, is_right))
+//     // {
+//     //     AstNode *rhs = ProdPrecedence((is_right) ? p : p+1);
+//     //     expr = newNode(AstBinary(expr, tok, rhs));
+//     //     // if (is_right)
+//     //     //     expr = new AstBinary(ProdPrecedence(p), tok, expr);
+//     //     // else
+//     //     //     expr = new AstBinary(expr, tok, ProdPrecedence(p+1));
+//     // }
+//     return expr;
+// }
 
 
 AstNode *cish::Parser::ProdList()

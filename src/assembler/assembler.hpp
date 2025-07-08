@@ -1,13 +1,11 @@
-// #pragma once
+#pragma once
+#include <stddef.h>
+#include <stdint.h>
 
-// #include <stddef.h>
-// #include <stdint.h>
-// #include <cish/node.hpp>
-
-// namespace cish
-// {
-//     uint32_t *assemble( AstNode *ast, uint32_t *buf, size_t bufsz );
-// }
+namespace cish
+{
+    void disassemble( void *base, size_t size );
+}
 
 
 // // struct iAstNode;

@@ -8,6 +8,22 @@
 
 
 
+enum Prec_: uint8_t
+{
+    Prec_None,
+    Prec_Assign,    // =
+    Prec_Or,        // |
+    Prec_And,       // &
+    Prec_Equal,     // == !=
+    Prec_Comp,      // < > <= >=
+    Prec_AddSub,    // + -
+    Prec_MulDiv,    // * /
+    Prec_Unary,     // ! -
+    Prec_Call,      // . ()
+    Prec_Primary
+};
+
+
 namespace cish
 {
     class Parser;
@@ -21,7 +37,7 @@ public:
     AstNode *buildAST( Token* );
 
 
-private:
+// private:
     Token   *m_prev, *m_curr;
 
     AstNode *ProdProgram();
@@ -38,8 +54,9 @@ private:
     AstNode *ProdScope();
 
     AstNode *ProdExpr();
-    AstNode *ProdPrecedence( uint8_t p );
+    AstNode *ProdPratt( Prec_ );
     Token   *ProdOperator( uint8_t p, bool &is_right );
+    AstNode *ProdPrecedence();
     AstNode *ProdPostfix();
     AstNode *ProdPrefix();
     AstNode *ProdList();

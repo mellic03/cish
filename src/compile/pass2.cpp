@@ -1,4 +1,4 @@
-#include "../vm/bytecode.hpp"
+#include "../vm/emit.hpp"
 #include "../vm/ctx.hpp"
 #include "../vm/vm.hpp"
 #include <cish/compile.hpp>
@@ -20,14 +20,34 @@ void compile_pass2( CompileCtx &ctx, AstNode *ast )
     std::cout << "---------------- PASS 2 ----------------\n";
     ctx.ripReset();
 
-    VmOp *jmp = ctx.emit(VmOp_jmp, 0);
+    // Emit_movImm(ctx, Reg_vbp, 32);
+    // Emit_movReg(ctx, Reg_vsp, Reg_vbp);
+    // Emit_addvsp(ctx, 1); // [vbp + 0]
+    // Emit_addvsp(ctx, 1); // [vbp + 1]
+
+    // Emit_pushImm(ctx, 2);
+    // Emit_vstor(ctx, 0);
+
+    // Emit_pushImm(ctx, 10);
+    // Emit_vstor(ctx, 1);
+
+    // Emit_vload(ctx, 0);
+    // Emit_vload(ctx, 1);
+    // Emit_mul(ctx);
+    // Emit_ret(ctx);
+    // ctx.emit(VmOp_exit);
+    // return;
+
+    VmOp *jmp = ctx.emit(VmOp_CompileIR);
     pass2(ctx, ast);
     ctx.emit(VmOp_exit);
 
-    auto *sym = ctx.findSymbol("main");
+    auto &tab = ctx.getGlobal();
+    auto *sym = tab.find("main");
     assert((sym != nullptr));
     assert((sym->tag == Sym_Func));
-    jmp->d32 = sym->as_Func.addr;
+
+    *jmp = Op_jmp(sym->as_Func.addr);
 
     std::cout << "----------------------------------------\n\n";
 }
@@ -63,27 +83,24 @@ static void pass2_List( CompileCtx &ctx, AstList &N )
 static void pass2_Binary( CompileCtx &ctx, AstBinary &N )
 {
     pass2(ctx, N.m_lhs);
-    ctx.emit(VmOpReg(VmOp_push32r, Reg_rax));
-
     pass2(ctx, N.m_rhs);
-    ctx.emit(VmOpReg(VmOp_push32r, Reg_rax));
-    ctx.emit(VmOp_swap32);
+    Emit_swap(ctx);
 
     switch (N.m_tok->type)
     {
-        default: break;
-        case Type::Plus:         ctx.emit(VmOp_add);  break;
-        case Type::Minus:        ctx.emit(VmOp_sub);  break;
-        case Type::Star:         ctx.emit(VmOp_mul);  break;
-        case Type::Slash:        ctx.emit(VmOp_div);  break;
-        case Type::Ampsnd:       ctx.emit(VmOp_and);  break;
-        case Type::Bar:          ctx.emit(VmOp_or);   break;
-        case Type::Hat:          ctx.emit(VmOp_xor);  break;
-        case Type::EqualEqual:   ctx.emit(VmOp_equ);  break;
-        case Type::Less:         ctx.emit(VmOp_les);  break;
-        case Type::LessEqual:    ctx.emit(VmOp_leq);  break;
-        case Type::Greater:      ctx.emit(VmOp_gtr);  break;
-        case Type::GreaterEqual: ctx.emit(VmOp_geq);  break;
+        default: return;
+        case Type::Plus:         Emit_add(ctx); break;
+        case Type::Minus:        Emit_sub(ctx); break;
+        case Type::Star:         Emit_mul(ctx); break;
+        case Type::Slash:        Emit_div(ctx); break;
+        case Type::Ampsnd:       Emit_and(ctx); break;
+        case Type::Bar:          Emit_or(ctx);  break;
+        case Type::Hat:          Emit_xor(ctx); break;
+        case Type::EqualEqual:   Emit_equ(ctx); break;
+        case Type::Less:         Emit_les(ctx); break;
+        case Type::LessEqual:    Emit_leq(ctx); break;
+        case Type::Greater:      Emit_gtr(ctx); break;
+        case Type::GreaterEqual: Emit_geq(ctx); break;
     }
 }
 
@@ -102,62 +119,77 @@ static void pass2_Postfix( CompileCtx &ctx, AstPostfix &N )
 }
 
 
-
-static void pass2_Scope( CompileCtx &ctx, AstScope &N )
-{
-    // pScope->push();
-    // ctx.emit(VmOp_pushr, VmOpReg(Reg_rbp));             // push rbp
-    // ctx.emit(VmOp_movrr, VmOpRegReg(Reg_rbp, Reg_rsp)); // mov  rbp, rsp
-
-    pass2(ctx, N.m_body);
-
-    // ctx.emit(VmOp_movrr, VmOpRegReg(Reg_rsp, Reg_rbp)); // mov  rsp, rbp
-    // pScope->pop();
-}
-
-
-
 static void pass2_Assign( CompileCtx &ctx, AstAssign &N )
 {
-    pass2(ctx, N.m_expr);
-
-    Symbol *sym = ctx.findSymbol(N.m_var);
+    auto &tab = ctx.getLocal();
+    auto *sym = tab.find(N.m_var);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Var));
     SymVar &vsym = sym->as_Var;
 
-    ctx.emit(VmOpReg(VmOp_push32r, Reg_rax));
-    ctx.emit(VmOpData(VmOp_vstor, vsym.addr));
+    pass2(ctx, N.m_expr);
+
+    // pop [rbp + vsym.addr]
+    Emit_vstor(ctx, vsym.rbpoff);
 }
 
 
 
 static void pass2_Cond( CompileCtx &ctx, AstCond &N )
 {
-    pass2(ctx, N.m_cond);            // push expr
-    ctx.emit(VmOp_push32d, 0);   // push 0/false
-
     if (N.m_kwd->type == Type::KwdIf)
     {
-        VmOp *jeq = ctx.emit(VmOp_jeq, 0);  // jmp d32 if [rsp-1] == [rsp-2]
+        pass2(ctx, N.m_cond);
 
-        pass2(ctx, N.m_body);
-        ctx.emit(VmOp_nop);
-        size_t cond_end = ctx.rip();
+        // pop rcmp0
+        // mov rcmp1, 0
+        Emit_popReg(ctx, Reg_rcmp0);
+        Emit_movImm(ctx, Reg_rcmp1, 0);
 
-        jeq->d32 = cond_end;
+        VmOp *jmpToElse, *jmpToEnd;
+        size_t atCond, atIf, atElse, atEnd;
+
+        // if (rcmp0 == rcmp1) jmp atElse
+        // if (rcmp0 == 0)     jmp atElse
+        atCond = ctx.rip();
+            jmpToElse = ctx.emit(VmOp_CompileIR);
+
+        atIf = ctx.rip();
+            pass2(ctx, N.m_if);
+            jmpToEnd = ctx.emit(VmOp_CompileIR);
+
+        atElse = ctx.rip();
+            pass2(ctx, N.m_else);
+
+        atEnd = ctx.rip();
+            // Nothing here
+
+        *jmpToElse = Op_jeq(atElse);
+        *jmpToEnd  = Op_jmp(atEnd);
+        // *jmpToElse = VmOpRegRegImm(VmOp_jne, Reg_r8, Reg_r9, atElse);
+        // *jmpToEnd  = VmOpImm(VmOp_jmp, atEnd);
     }
 
     // else if (N.m_kwd->type == Type::KwdWhile)
     // {
-    //     size_t loop_beg = op_top-op_base;
-    //     auto *jeqd = ctx.emit(VmOp_jeqd, VmOpData(0));  // if expr==0: jmp to loop_end
+    //     VmOp *jmpToCond, *jmpToEnd;
+    //     size_t atCond, atBody, atEnd;
 
-    //     pass2(ctx, N.m_body);
-    //     ctx.emit(VmOp_jeqd, VmOpData(loop_beg));        // jmp to loop_beg
+    //     atCond = ctx.rip();
+    //         pass2(ctx, N.m_cond);
+    //         ctx.emit(VmOpReg(VmOp_pop32r, Reg_r8));
+    //         ctx.emit(VmOpRegImm(VmOp_mov32, Reg_r9, 0));
+    //         jmpToEnd = ctx.emit(VmOp_CompileIR);
 
-    //     size_t loop_end = op_top-op_base;
-    //     jeqd->data = VmOpU64(loop_end);
+    //     atBody = ctx.rip();
+    //         pass2(ctx, N.m_if);
+    //         jmpToCond = ctx.emit(VmOp_CompileIR);
+
+    //     atEnd = ctx.rip();
+    //         // Nothing here
+
+    //     *jmpToEnd  = VmOpRegRegImm(VmOp_jne, Reg_r8, Reg_r9, atEnd);
+    //     *jmpToCond = VmOpImm(VmOp_jmp, atCond);
     // }
 
 }
@@ -165,19 +197,23 @@ static void pass2_Cond( CompileCtx &ctx, AstCond &N )
 
 static void pass2_Call( CompileCtx &ctx, AstCall &N )
 {
-    Symbol *sym = ctx.findSymbol(N.m_callee);
+    Symtab &tab = ctx.getLocal();
+    Symbol *sym = tab.find(N.m_callee);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Func));
     SymFunc &fsym = sym->as_Func;
 
-    ctx.emit(VmOpData(VmOp_call, fsym.addr));
+    Emit_call(ctx, fsym.addr);
+    Emit_pushReg(ctx, Reg_rax);
+    // ctx.emit(VmOpImm(VmOp_call, fsym.addr));
 }
 
 
 static void pass2_Return( CompileCtx &ctx, AstReturn &N )
 {
     pass2(ctx, N.m_expr);
-    ctx.emit(VmOp_ret);
+    Emit_popReg(ctx, Reg_rax);
+    Emit_ret(ctx);
 }
 
 
@@ -190,40 +226,44 @@ static void pass2_Type( CompileCtx &ctx, AstType &N )
 
 static void pass2_VarDecl( CompileCtx &ctx, AstVarDecl &N )
 {
+    Symtab &tab = ctx.getLocal();
     Symbol *sym = nullptr;
 
-    sym = ctx.findSymbol(N.m_typename);
+    sym = tab.find(N.m_typename);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Type));
     SymType &tsym = sym->as_Type;
-    size_t addr = ctx.frameAlloc(tsym.size, tsym.align);
+    size_t addr = tab.frameAlloc(tsym.size, 1);
 
-    sym = ctx.createSymbol(N.m_name, SymVar(N.m_typename, addr));
+    sym = tab.insert(N.m_name, SymVar(N.m_typename, addr));
     assert((sym != nullptr));
     assert((sym->tag == Sym_Var));
     SymVar &vsym = sym->as_Var;
 
-    ctx.emit(VmOpData(VmOp_vpush32d, tsym.size));
-    printf("%s %s, V[%lu]\n", N.m_typename, N.m_name, vsym.addr);
+    // add rsp, tsym.size
+    Emit_addImm(ctx, Reg_vsp, tsym.size);
+
+    printf("let %s %s &[vbp + %lu]\n", N.m_typename, N.m_name, addr);
+
 }
 
 
 static void pass2_FunDecl( CompileCtx &ctx, AstFunDecl &N )
 {
-    Symbol *sym = nullptr;
-
-    sym = ctx.createSymbol(N.m_name, SymFunc(N.m_ret_typename, ctx.rip()));
+    Symtab &tab = ctx.getLocal();
+    Symbol *sym = tab.insert(N.m_name, SymFunc(N.m_ret_typename, ctx.rip()));
     assert((sym != nullptr));
     assert((sym->tag == Sym_Func));
 
     SymFunc &fsym = sym->as_Func;
     printf("[%lu] %s\n", fsym.addr, sym->key);
 
-    ctx.pushScope();
+    ctx.pushLocal();
     pass2(ctx, N.m_args);
     pass2(ctx, N.m_body);
+    ctx.popLocal();
+
     fsym.argc = N.m_args->as_List.size();
-    ctx.popScope();
 }
 
 
@@ -231,15 +271,15 @@ static void pass2_FunDecl( CompileCtx &ctx, AstFunDecl &N )
 
 static void pass2_Var( CompileCtx &ctx, AstVar &N )
 {
-    Symbol *sym = ctx.findSymbol(N.m_symkey);
+    Symtab &tab = ctx.getLocal();
+    Symbol *sym = tab.find(N.m_symkey);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Var));
 
     SymVar &vsym = sym->as_Var;
 
-    ctx.emit(VmOpData(VmOp_vload, vsym.addr));
-    ctx.emit(VmOpReg(VmOp_pop32r, Reg_rax));
-    // printf("vload V[%lu]\n", vsym.addr);
+    // push [rbp + vsym.rbpoff]
+    Emit_vload(ctx, vsym.rbpoff);
 }
 
 
@@ -254,7 +294,7 @@ static void pass2_String( CompileCtx &ctx, AstString &N )
 static void pass2_Number( CompileCtx &ctx, AstNumber &N )
 {
     int64_t value = atol(N.m_str);
-    ctx.emit(VmOpRegData(VmOp_mov32, Reg_rax, value));
+    Emit_pushImm(ctx, value);
 }
 
 
@@ -273,7 +313,6 @@ static void pass2( CompileCtx &ctx, AstNode *N )
         case Ast_Binary:    pass2_Binary(ctx, N->as_Binary);     break;
         case Ast_Prefix:    pass2_Prefix(ctx, N->as_Prefix);     break;
         case Ast_Postfix:   pass2_Postfix(ctx, N->as_Postfix);   break;
-        case Ast_Scope:     pass2_Scope(ctx, N->as_Scope);       break;
         case Ast_Assign:    pass2_Assign(ctx, N->as_Assign);     break;
         case Ast_Cond:      pass2_Cond(ctx, N->as_Cond);         break;
         case Ast_Call:      pass2_Call(ctx, N->as_Call);         break;

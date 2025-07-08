@@ -1050,13 +1050,13 @@ enum {
 
 #define MPC_MAX_RECURSION_DEPTH 1000
 
-static mpc_result_t *mpc_grow_results(mpc_input_t *i, int j, mpc_result_t *results_stk, mpc_result_t *results){
+static mpc_result_t *mpc_grow_results(mpc_input_t *i, int j, mpc_result_t *results_mem, mpc_result_t *results){
   mpc_result_t *tmp_results = results;
 
   if (j == MPC_PARSE_STACK_MIN) {
     int results_slots = j + j / 2;
     tmp_results = mpc_malloc(i, sizeof(mpc_result_t) * results_slots);
-    memcpy(tmp_results, results_stk, sizeof(mpc_result_t) * MPC_PARSE_STACK_MIN);
+    memcpy(tmp_results, results_mem, sizeof(mpc_result_t) * MPC_PARSE_STACK_MIN);
   } else if (j >= MPC_PARSE_STACK_MIN) {
     int results_slots = j + j / 2;
     tmp_results = mpc_realloc(i, tmp_results, sizeof(mpc_result_t) * results_slots);
@@ -1068,7 +1068,7 @@ static mpc_result_t *mpc_grow_results(mpc_input_t *i, int j, mpc_result_t *resul
 static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_err_t **e, int depth) {
 
   int j = 0, k = 0;
-  mpc_result_t results_stk[MPC_PARSE_STACK_MIN];
+  mpc_result_t results_mem[MPC_PARSE_STACK_MIN];
   mpc_result_t *results;
 
   if (depth == MPC_MAX_RECURSION_DEPTH)
@@ -1190,11 +1190,11 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
     case MPC_TYPE_MANY:
 
-      results = results_stk;
+      results = results_mem;
 
       while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        results = mpc_grow_results(i, j, results_stk, results);
+        results = mpc_grow_results(i, j, results_mem, results);
       }
 
       *e = mpc_err_merge(i, *e, results[j].error);
@@ -1205,11 +1205,11 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
     case MPC_TYPE_MANY1:
 
-      results = results_stk;
+      results = results_mem;
 
       while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
-        results = mpc_grow_results(i, j, results_stk, results);
+        results = mpc_grow_results(i, j, results_mem, results);
       }
 
       if (j == 0) {
@@ -1227,18 +1227,18 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
    case MPC_TYPE_SEPBY1:
 
-      results = results_stk;
+      results = results_mem;
 
       if(mpc_parse_run(i, p->data.sepby1.x, &results[j], e, depth+1)){
         j++;
-        results = mpc_grow_results(i, j, results_stk, results);
+        results = mpc_grow_results(i, j, results_mem, results);
 
         while (
           mpc_parse_run(i, p->data.sepby1.sep, &results[j], e, depth+1) &&
           mpc_parse_run(i, p->data.sepby1.x, &results[j], e, depth+1)
         ) {
           j++;
-          results = mpc_grow_results(i, j, results_stk, results);
+          results = mpc_grow_results(i, j, results_mem, results);
         }
       }
 
@@ -1258,7 +1258,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       results = p->data.repeat.n > MPC_PARSE_STACK_MIN
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.repeat.n)
-        : results_stk;
+        : results_mem;
 
       while (mpc_parse_run(i, p->data.repeat.x, &results[j], e, depth+1)) {
         j++;
@@ -1286,7 +1286,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       results = p->data.or.n > MPC_PARSE_STACK_MIN
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.or.n)
-        : results_stk;
+        : results_mem;
 
       for (j = 0; j < p->data.or.n; j++) {
         if (mpc_parse_run(i, p->data.or.xs[j], &results[j], e, depth+1)) {
@@ -1305,7 +1305,7 @@ static int mpc_parse_run(mpc_input_t *i, mpc_parser_t *p, mpc_result_t *r, mpc_e
 
       results = p->data.or.n > MPC_PARSE_STACK_MIN
         ? mpc_malloc(i, sizeof(mpc_result_t) * p->data.or.n)
-        : results_stk;
+        : results_mem;
 
       mpc_input_mark(i);
       for (j = 0; j < p->data.and.n; j++) {

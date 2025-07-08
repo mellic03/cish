@@ -1,11 +1,23 @@
-func u08 woopee()
+func i32 woopee()
 {
     return 1111;
 }
 
+func i32 yipee()
+{
+    return woopee();
+}
+
+func i32 get1000()
+{
+    let i32 a = 100;
+    let i32 b = 10;
+    return a*b;
+}
+
 func i32 testFunction( i32 x, i32 y )
 {
-    return 2222;
+    return 1 + 2 + 3;
 }
 
 func i32 main()
@@ -13,7 +25,9 @@ func i32 main()
     let i32 X = 12;
     let i32 A = 50;
     let i32 B = 25;
+    let i32 Z = get1000();
+    let i32 F = get1000();
 
-    return (A-X) + B + woopee();
+    return (A-X) * B + Z;
 }
 

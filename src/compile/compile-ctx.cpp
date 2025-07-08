@@ -6,137 +6,58 @@
 #include <assert.h>
 
 
-
-cish::StackFrame::StackFrame()
-:   m_offset(0)
-{
-
-}
-
-
-size_t cish::StackFrame::frameAlloc( size_t nbytes, size_t align )
-{
-    size_t prev = align_up(m_offset, align);
-    m_offset = prev + nbytes;
-    return prev;
-}
-
-
-
-
-cish::Symbol*
-cish::StackFrame::find( const char *key )
-{
-    for (auto &sym: m_symbols)
-        if (strcmp(key, sym.key) == 0)
-            return &sym;
-    return nullptr;
-}
-
-
-#define LOL_LMAO(Tp)\
-cish::Symbol *cish::StackFrame::insert( const char *key, const Tp &data )\
-{\
-    assert((find(key) == nullptr));\
-    auto *sym = m_symbols.push(Symbol(key));\
-    new (sym->as_raw) Tp(data);\
-    sym->tag = data.get_tag();\
-    return sym;\
-}
-
-LOL_LMAO(cish::SymType);
-LOL_LMAO(cish::SymFunc);
-LOL_LMAO(cish::SymVar);
-
-#undef LOL_LMAO
-
-
-
 cish::CompileCtx::CompileCtx( uint32_t *buf, size_t bufsz )
 :   m_buf((VmOp*)buf),
     m_rip(0)
 {
-    pushScope();
+    pushLocal();
 
-    createSymbol("i08", SymType(sizeof(int8_t), alignof(int8_t)));
-    createSymbol("i16", SymType(sizeof(int16_t), alignof(int16_t)));
-    createSymbol("i32", SymType(sizeof(int32_t), alignof(int32_t)));
-    createSymbol("u08", SymType(sizeof(uint8_t), alignof(uint8_t)));
-    createSymbol("u16", SymType(sizeof(uint16_t), alignof(uint16_t)));
-    createSymbol("u32", SymType(sizeof(uint32_t), alignof(uint32_t)));
+    Symtab &tab = getGlobal();
+    tab.insert("i08", SymType(sizeof(int8_t), alignof(int8_t)));
+    tab.insert("i16", SymType(sizeof(int16_t), alignof(int16_t)));
+    tab.insert("i32", SymType(sizeof(int32_t), alignof(int32_t)));
+    tab.insert("u08", SymType(sizeof(uint8_t), alignof(uint8_t)));
+    tab.insert("u16", SymType(sizeof(uint16_t), alignof(uint16_t)));
+    tab.insert("u32", SymType(sizeof(uint32_t), alignof(uint32_t)));
+    tab.insert("uchp", SymType(sizeof(char*), alignof(char*)));
 
 }
 
-
-void cish::CompileCtx::pushScope()
+void cish::CompileCtx::pushLocal()
 {
-    m_frames.push(StackFrame());
+    if (m_symtabs.size() == 0)
+    {
+        m_symtabs.push(new Symtab());
+        m_symtabs.top()->m_parent = nullptr;
+    }
+
+    else
+    {
+        Symtab *prev = m_symtabs.top();
+        m_symtabs.push(new Symtab());
+        m_symtabs.top()->m_parent = prev;
+    }
 }
 
 
-void cish::CompileCtx::popScope()
+void cish::CompileCtx::popLocal()
 {
-    m_frames.pop();
+    delete m_symtabs.pop();
 }
 
 
 
-
-
-// cish::typesym_t*
-// cish::CompileCtx::findType( const char *key )
+// size_t cish::CompileCtx::frameAlloc( size_t nbytes, size_t align )
 // {
-//     for (auto &sym: m_types)
-//         if (strcmp(key, sym.key) == 0)
-//             return &sym;
-//     return nullptr;
-// }
-
-// cish::typesym_t*
-// cish::CompileCtx::createType( const char *key, size_t size, size_t align )
-// {
-//     if (auto *sym = findType(key))
-//         return sym;
-//     return m_types.push(typesym_t(key, size, align));
-// }
-
-
-
-
-
-// cish::funcsym_t*
-// cish::CompileCtx::findFunction( const char *key )
-// {
-//     for (auto &sym: m_funcs)
-//         if (strcmp(key, sym.key) == 0)
-//             return &sym;
-//     return nullptr;
-// }
-
-// cish::funcsym_t*
-// cish::CompileCtx::createFunction( const char *key, size_t addr )
-// {
-//     if (auto *sym = findFunction(key))
-//         return sym;
-//     return m_funcs.push({key, addr, 0});
+//     return m_globals.frameAlloc(nbytes, align);
 // }
 
 
-size_t cish::CompileCtx::frameAlloc( size_t nbytes, size_t align )
-{
-    return m_globals.frameAlloc(nbytes, align);
-}
-
-
-cish::Symbol*
-cish::CompileCtx::findSymbol( const char *key )
-{
-    return m_globals.find(key);
-    // for (int d=m_frames.size()-1; d>=0; d--)
-    //     if (auto *sym = m_frames[d].find(key))
-    //         return sym;
-    // return nullptr;
-}
+// cish::Symbol*
+// cish::CompileCtx::findSymbol( const char *key )
+// {
+//     return m_symtabs.top()->find(key);
+// }
 
 
 // cish::scope_sym_t
