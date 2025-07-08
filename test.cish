@@ -1,3 +1,7 @@
+
+let i32 FatBitch = 21;
+
+
 func i32 woopee()
 {
     return 1111;
@@ -28,6 +32,6 @@ func i32 main()
     let i32 Z = get1000();
     let i32 F = get1000();
 
-    return (A-X) * B + Z;
+    return (A-X) * B + (Z + F);
 }
 

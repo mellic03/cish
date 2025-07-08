@@ -90,41 +90,40 @@
 namespace cish
 {
     inline constexpr void Emit_movImm( CompileCtx &ctx, Reg_ dst, uint32_t imm )
-    { EMIT(VmOp_mov_rxi, dst, 0, imm); }
+    { EMIT(OpRI_mov, dst, 0, imm); }
 
     inline constexpr void Emit_movReg( CompileCtx &ctx, Reg_ dst, Reg_ src )
-    { EMIT(VmOp_mov_rrx, dst, src, 0); }
+    { EMIT(OpRR_mov, dst, src, 0); }
+
+    inline constexpr void Emit_addImm( CompileCtx &ctx, Reg_ dst, uint32_t imm )
+    { EMIT(OpRI_add, dst, 0, imm); }
+
+    inline constexpr void Emit_addReg( CompileCtx &ctx, Reg_ dst, Reg_ src )
+    { EMIT(OpRR_add, dst, src, 0); }
 
 
     inline constexpr void Emit_gload( CompileCtx &ctx, uint32_t imm )
-    { EMIT(VmOp_gload_xi, 0, 0, imm); }
+    { EMIT(OpXI_gload, 0, 0, imm); }
 
     inline constexpr void Emit_gstor( CompileCtx &ctx, uint32_t imm )
-    { EMIT(VmOp_gstor_ix, 0, 0, imm); }
+    { EMIT(OpIX_gstor, 0, 0, imm); }
 
 
     inline constexpr void Emit_vload( CompileCtx &ctx, uint32_t rbpoff )
-    { EMIT(VmOp_vload_xi, 0, 0, rbpoff); }
+    { EMIT(OpXI_vload, 0, 0, rbpoff); }
 
     inline constexpr void Emit_vstor( CompileCtx &ctx, uint32_t rbpoff )
-    { EMIT(VmOp_vstor_ix, 0, 0, rbpoff); }
-
-
-    inline constexpr void Emit_addImm( CompileCtx &ctx, Reg_ dst, uint32_t imm )
-    { EMIT(VmOp_add_rxi, dst, 0, imm); }
-
-    inline constexpr void Emit_addReg( CompileCtx &ctx, Reg_ dst, Reg_ src )
-    { EMIT(VmOp_add_rrx, dst, src, 0); }
+    { EMIT(OpIX_vstor, 0, 0, rbpoff); }
 
 
     inline constexpr void Emit_pushImm( CompileCtx &ctx, uint32_t imm )
-    { EMIT(VmOp_push_xxi, 0, 0, imm); }
+    { EMIT(OpI_push, 0, 0, imm); }
 
     inline constexpr void Emit_pushReg( CompileCtx &ctx, Reg_ src )
-    { EMIT(VmOp_push_xrx, 0, src, 0); }
+    { EMIT(OpR_push, 0, src, 0); }
 
     inline constexpr void Emit_popReg( CompileCtx &ctx, Reg_ dst=Reg_rnul )
-    { EMIT(VmOp_pop_rxx, dst, 0, 0); }
+    { EMIT(OpR_pop, dst, 0, 0); }
 
     EMIT_xxx(swap);
 

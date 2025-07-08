@@ -106,6 +106,11 @@ namespace cish
             return stack[--rsp];
         }
 
+        uint32_t &top()
+        {
+            return stack[rsp-1];
+        }
+
         // template <typename T>
         // T &top()
         // {

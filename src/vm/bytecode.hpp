@@ -56,19 +56,19 @@ namespace cish
         // VmOp_push_r, VmOp_push_i,
         // VmOp_pop_r,
 
-        VmOp_mov_rxi,
-        VmOp_mov_rrx,
-        VmOp_add_rxi,
-        VmOp_add_rrx,
+        OpRI_mov,
+        OpRR_mov,
+        OpRI_add,
+        OpRR_add,
 
-        VmOp_gload_xi,
-        VmOp_gstor_ix,
-        VmOp_vload_xi,
-        VmOp_vstor_ix,
+        OpXI_gload,
+        OpIX_gstor,
+        OpXI_vload,
+        OpIX_vstor,
 
-        VmOp_push_xxi,
-        VmOp_push_xrx,
-        VmOp_pop_rxx,
+        OpI_push,
+        OpR_push,
+        OpR_pop,
         VmOp_swap,
 
         VmOp_add,
@@ -100,7 +100,6 @@ namespace cish
         VmOp_NumOps,
     };
 
-
     struct VmOp
     {
         struct {
@@ -128,36 +127,37 @@ namespace cish
 
     } __attribute__((aligned(4)));
 
-    // inline constexpr
-    // VmOp VmOpReg( VmOp_ type, uint8_t A )
-    // {
-    //     return VmOp(type, A, 0, 0);
-    // }
 
-    // inline constexpr
-    // VmOp VmOpRegReg( VmOp_ type, uint8_t A, uint8_t B )
-    // {
-    //     return VmOp(type, A, B, 0);
-    // }
 
-    // inline constexpr
-    // VmOp VmOpImm( VmOp_ type, uint32_t value )
-    // {
-    //     return VmOp(type, 0, 0, value);
-    // }
 
-    // inline constexpr
-    // VmOp VmOpRegImm( VmOp_ type, uint8_t A, uint32_t value )
-    // {
-    //     return VmOp(type, A, 0, value);
-    // }
 
-    // inline constexpr
-    // VmOp VmOpRegRegImm( VmOp_ type, uint8_t A, uint8_t B, uint32_t value )
+    // enum OpMd_: uint8_t
     // {
-    //     return VmOp(type, A, B, value);
-    // }
+    //     OpMd_X, OpMd_R, OpMd_I, OpMd_P
+    // };
+    
+    // struct VmInst
+    // {
+    //     uint8_t opcode;
+    //     // VmOpXX_add
+    //     // VmOpRR_add
+    //     // VmOpRI_add
+    //     // VmOpRP_add
+    //                       // none, reg, imm, ptr
+    //     uint8_t xmode :2; // [0-3] --> x, r, i, p
+    //     uint8_t ymode :2;
+    //     uint8_t xsize :1; // 0/1 --> 32/64
+    //     uint8_t ysize :1;
+    //     uint8_t sign  :1;
+    //     uint8_t resv  :1;
 
+    //     uint8_t regx :4;
+    //     uint8_t regy :4;
+
+    //     uint8_t regz :4;
+    //     uint8_t regw :4;
+    // };
+    
 }
 
 

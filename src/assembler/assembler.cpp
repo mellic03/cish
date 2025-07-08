@@ -55,6 +55,8 @@ static const char *VmRegStr( uint8_t idx )
         case Reg_rbp:  return "rbp";
         case Reg_rip:  return "rip";
         case Reg_memptr:    return "memptr";
+        case Reg_vsp:       return "vsp";
+        case Reg_vbp:       return "vbp";
         case Reg_rspoff:    return "rspoff";
         case Reg_rbpoff:    return "rbpoff";
         case Reg_rcmp0:     return "rcmp0";
@@ -70,19 +72,19 @@ const char *VmOpStr( uint8_t opcode )
 
     switch (opcode)
     {
-        default:        return "INVALID";
-        case VmOp_nop:  return "nop";
-        case VmOp_mov_rxi:  return "mov_rxi";
-        case VmOp_mov_rrx:  return "mov_rrx";
-        case VmOp_gload_xi: return "gload_xi";
-        case VmOp_gstor_ix: return "gstor_ix";
-        case VmOp_vload_xi: return "vload_xi";
-        case VmOp_vstor_ix: return "vstor_ix";
-        case VmOp_add_rxi:   return "add_rxi";
-        case VmOp_add_rrx:   return "add_rrx";
-        case VmOp_push_xxi: return "push_xxi";
-        case VmOp_push_xrx: return "push_xrx";
-        case VmOp_pop_rxx:  return "pop_rxx";
+        default:            return "INVALID";
+        case VmOp_nop:      return "nop";
+        case OpRI_mov:      return "ri_mov";
+        case OpRR_mov:      return "rr_mov";
+        case OpRI_add:      return "ri_add";
+        case OpRR_add:      return "rr_add";
+        case OpXI_gload:    return "xi_gload";
+        case OpIX_gstor:    return "ix_gstor";
+        case OpXI_vload:    return "xi_vload";
+        case OpIX_vstor:    return "ix_vstor";
+        case OpI_push:      return "push_xxi";
+        case OpR_push:      return "push_xrx";
+        case OpR_pop:       return "pop_rxx";
         case VmOp_swap: return "swap";
         case VmOp_add:  return "add";
         case VmOp_sub:  return "sub";

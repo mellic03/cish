@@ -233,7 +233,7 @@ static void pass2_VarDecl( CompileCtx &ctx, AstVarDecl &N )
     assert((sym != nullptr));
     assert((sym->tag == Sym_Type));
     SymType &tsym = sym->as_Type;
-    size_t addr = tab.frameAlloc(tsym.size, 1);
+    size_t addr = tab.frameAlloc(tsym.size, tsym.align);
 
     sym = tab.insert(N.m_name, SymVar(N.m_typename, addr));
     assert((sym != nullptr));
@@ -243,7 +243,7 @@ static void pass2_VarDecl( CompileCtx &ctx, AstVarDecl &N )
     // add rsp, tsym.size
     Emit_addImm(ctx, Reg_vsp, tsym.size);
 
-    printf("let %s %s &[vbp + %lu]\n", N.m_typename, N.m_name, addr);
+    printf("[vbp + %lu] %s %s\n", addr, N.m_typename, N.m_name);
 
 }
 

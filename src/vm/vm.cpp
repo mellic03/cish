@@ -16,19 +16,19 @@ int cish::exec( uint32_t *program, size_t size )
     void *jtab[256] = {
         &&op_nop,
 
-        &&op_mov_rxi,
-        &&op_mov_rrx,
-        &&op_add_rxi,
-        &&op_add_rrx,
+        &&op_ri_mov,
+        &&op_rr_mov,
+        &&op_ri_add,
+        &&op_rr_add,
 
-        &&op_gload_xi,
-        &&op_gstor_ix,
-        &&op_vload_xi,
-        &&op_vstor_ix,
+        &&op_i_gload,
+        &&op_i_gstor,
+        &&op_i_vload,
+        &&op_i_vstor,
 
-        &&op_push_xxi,
-        &&op_push_xrx,
-        &&op_pop_rxx,
+        &&op_i_push,
+        &&op_r_push,
+        &&op_r_pop,
         &&op_swap,
 
         &&op_add,
@@ -88,32 +88,31 @@ int cish::exec( uint32_t *program, size_t size )
 
 op_nop: DISPATCH();
 
-op_mov_rxi: DST_REG = op->imm; DISPATCH();
-op_mov_rrx: DST_REG = SRC_REG; DISPATCH();
-op_add_rxi: DST_REG += op->imm; DISPATCH();
-op_add_rrx: DST_REG += SRC_REG; DISPATCH();
+op_ri_mov: DST_REG = op->imm; DISPATCH();
+op_rr_mov: DST_REG = SRC_REG; DISPATCH();
+op_ri_add: DST_REG += op->imm; DISPATCH();
+op_rr_add: DST_REG += SRC_REG; DISPATCH();
 
-op_gload_xi:
+op_i_gload:
     ctx.push(ctx.vstack[op->imm]);
     DISPATCH();
 
-op_gstor_ix:
+op_i_gstor:
     ctx.vstack[op->imm] = ctx.pop();
     DISPATCH();
 
-op_vload_xi:
+op_i_vload:
     ctx.push(ctx.vstack[ctx.vbp + op->imm]);
     DISPATCH();
 
-op_vstor_ix:
+op_i_vstor:
     ctx.vstack[ctx.vbp + op->imm] = ctx.pop();
     DISPATCH();
 
-
-op_push_xxi: ctx.push(op->imm);   DISPATCH();
-op_push_xrx: ctx.push(SRC_REG);   DISPATCH();
-op_pop_rxx:  DST_REG = ctx.pop(); DISPATCH();
-op_swap:     ctx.swap();          DISPATCH();
+op_i_push: ctx.push(op->imm);   DISPATCH();
+op_r_push: ctx.push(SRC_REG);   DISPATCH();
+op_r_pop:  DST_REG = ctx.pop(); DISPATCH();
+op_swap:   ctx.swap();          DISPATCH();
 
 op_add:  BINARY_OP(+);  DISPATCH();
 op_sub:  BINARY_OP(-);  DISPATCH();
