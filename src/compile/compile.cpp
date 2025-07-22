@@ -11,11 +11,8 @@ using namespace cish;
 extern void compile_pass1( CompileCtx&, AstNode* );
 extern void compile_pass2( CompileCtx&, AstNode* );
 
-
-uint32_t *cish::compile( AstNode *ast, uint32_t *buf, size_t bufsz )
+uint64_t *cish::compile( CompileCtx &ctx, AstNode *ast )
 {
-    CompileCtx ctx(buf, bufsz);
-
     compile_pass1(ctx, ast);
     compile_pass2(ctx, ast);
 

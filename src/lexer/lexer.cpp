@@ -153,7 +153,7 @@ void cish::Lexer::emit( uint32_t type )
     if (type != Type::None)
         *(m_toktop++) = Token(type, m_lexbuf, m_lineno, m_colno);
 
-    printf("\'%c\' emit [%s] \"%s\" \n", *m_curr, TypeToStr(type), m_lexbuf);
+    // printf("\'%c\' emit [%s] \"%s\" \n", *m_curr, TypeToStr(type), m_lexbuf);
 
     memset(m_lexbuf, '\0', sizeof(m_lexbuf));
     m_lextop = m_lexbuf;

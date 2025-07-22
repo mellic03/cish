@@ -18,23 +18,15 @@ static void pass2( CompileCtx&, AstNode* );
 void compile_pass2( CompileCtx &ctx, AstNode *ast )
 {
     std::cout << "---------------- PASS 2 ----------------\n";
-    ctx.ripReset();
+    ctx.clearRegs();
 
-    // Emit_movImm(ctx, Reg_vbp, 32);
-    // Emit_movReg(ctx, Reg_vsp, Reg_vbp);
-    // Emit_addvsp(ctx, 1); // [vbp + 0]
-    // Emit_addvsp(ctx, 1); // [vbp + 1]
-
-    // Emit_pushImm(ctx, 2);
-    // Emit_vstor(ctx, 0);
-
-    // Emit_pushImm(ctx, 10);
-    // Emit_vstor(ctx, 1);
-
-    // Emit_vload(ctx, 0);
-    // Emit_vload(ctx, 1);
-    // Emit_mul(ctx);
-    // Emit_ret(ctx);
+    // Emit_prntImm(ctx, 1);
+    // Emit_prntImm(ctx, 2);
+    // Emit_prntImm(ctx, 4);
+    // Emit_prntImm(ctx, 8);
+    // Emit_prntImm(ctx, 16);
+    // Emit_prntImm(ctx, 10);
+    // Emit_prntImm(ctx, 10000);
     // ctx.emit(VmOp_exit);
     // return;
 
@@ -42,12 +34,9 @@ void compile_pass2( CompileCtx &ctx, AstNode *ast )
     pass2(ctx, ast);
     ctx.emit(VmOp_exit);
 
-    auto &tab = ctx.getGlobal();
-    auto *sym = tab.find("main");
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Func));
-
-    *jmp = Op_jmp(sym->as_Func.addr);
+    auto *tab = ctx.globalTab();
+    auto [fsym, sym] = tab->find<SymFunc>("main");
+    *jmp = Op_jmp(fsym->addr);
 
     std::cout << "----------------------------------------\n\n";
 }
@@ -121,16 +110,13 @@ static void pass2_Postfix( CompileCtx &ctx, AstPostfix &N )
 
 static void pass2_Assign( CompileCtx &ctx, AstAssign &N )
 {
-    auto &tab = ctx.getLocal();
-    auto *sym = tab.find(N.m_var);
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Var));
-    SymVar &vsym = sym->as_Var;
+    Symtab *tab = N.m_symtab;
+    auto [vsym, sym] = tab->find<SymVar>(N.m_var);
 
     pass2(ctx, N.m_expr);
 
     // pop [rbp + vsym.addr]
-    Emit_vstor(ctx, vsym.rbpoff);
+    Emit_lstor(ctx, vsym->offset);
 }
 
 
@@ -197,8 +183,8 @@ static void pass2_Cond( CompileCtx &ctx, AstCond &N )
 
 static void pass2_Call( CompileCtx &ctx, AstCall &N )
 {
-    Symtab &tab = ctx.getLocal();
-    Symbol *sym = tab.find(N.m_callee);
+    Symtab *tab = N.m_symtab;
+    Symbol *sym = tab->find(N.m_symkey);
     assert((sym != nullptr));
     assert((sym->tag == Sym_Func));
     SymFunc &fsym = sym->as_Func;
@@ -217,69 +203,49 @@ static void pass2_Return( CompileCtx &ctx, AstReturn &N )
 }
 
 
-static void pass2_Type( CompileCtx &ctx, AstType &N )
-{
-
-}
-
-
-
 static void pass2_VarDecl( CompileCtx &ctx, AstVarDecl &N )
 {
-    Symtab &tab = ctx.getLocal();
-    Symbol *sym = nullptr;
+    Symtab *tab = N.m_symtab;
 
-    sym = tab.find(N.m_typename);
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Type));
-    SymType &tsym = sym->as_Type;
-    size_t addr = tab.frameAlloc(tsym.size, tsym.align);
+    auto [tsym, trhs] = tab->find<SymType>(N.m_typekey);
+    auto [vsym, vrhs] = tab->find<SymVar>(N.m_name);
 
-    sym = tab.insert(N.m_name, SymVar(N.m_typename, addr));
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Var));
-    SymVar &vsym = sym->as_Var;
-
-    // add rsp, tsym.size
-    Emit_addImm(ctx, Reg_vsp, tsym.size);
-
-    printf("[vbp + %lu] %s %s\n", addr, N.m_typename, N.m_name);
+    // VmInstruction(OP_xxx_sub, 0, MD::reg, MD::imm);
+    // Emit_addImm(ctx, Reg_rsp, tsym->size);
+    // printf("%s %s &[%lu]\n", vsym->typekey, vrhs->key, vsym->offset);
 
 }
 
 
 static void pass2_FunDecl( CompileCtx &ctx, AstFunDecl &N )
 {
-    Symtab &tab = ctx.getLocal();
-    Symbol *sym = tab.insert(N.m_name, SymFunc(N.m_ret_typename, ctx.rip()));
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Func));
+    Symtab *tab = N.m_symtab;
 
-    SymFunc &fsym = sym->as_Func;
-    printf("[%lu] %s\n", fsym.addr, sym->key);
+    auto [fsym, sym] = tab->find<SymFunc>(N.m_name);
+    fsym->addr = ctx.rip();
 
-    ctx.pushLocal();
+    printf("[%lu] %s\n", fsym->addr, sym->key);
+    printf("allocSz: %luB\n", fsym->allocsz);
+
+    // ctx.emit(); VmInstruction(OP_xxx_sub, 0, MD::reg, MD::imm);
+    Emit_subImm(ctx, Reg_rsp, fsym->allocsz);
+    // Emit_prntReg(ctx, Reg_rbp);
+    // Emit_prntReg(ctx, Reg_rsp);
+
     pass2(ctx, N.m_args);
     pass2(ctx, N.m_body);
-    ctx.popLocal();
 
-    fsym.argc = N.m_args->as_List.size();
+    // Emit_ret(ctx);
 }
-
-
 
 
 static void pass2_Var( CompileCtx &ctx, AstVar &N )
 {
-    Symtab &tab = ctx.getLocal();
-    Symbol *sym = tab.find(N.m_symkey);
-    assert((sym != nullptr));
-    assert((sym->tag == Sym_Var));
-
-    SymVar &vsym = sym->as_Var;
+    Symtab *tab = N.m_symtab;
+    auto [vsym, sym] = tab->find<SymVar>(N.m_symkey);
 
     // push [rbp + vsym.rbpoff]
-    Emit_vload(ctx, vsym.rbpoff);
+    Emit_lload(ctx, vsym->offset);
 }
 
 
@@ -306,7 +272,7 @@ static void pass2_Number( CompileCtx &ctx, AstNumber &N )
 
 static void pass2( CompileCtx &ctx, AstNode *N )
 {
-    switch (N->type)
+    switch (N->m_type)
     {
         default: return;
         case Ast_List:      pass2_List(ctx, N->as_List);         break;
@@ -317,7 +283,6 @@ static void pass2( CompileCtx &ctx, AstNode *N )
         case Ast_Cond:      pass2_Cond(ctx, N->as_Cond);         break;
         case Ast_Call:      pass2_Call(ctx, N->as_Call);         break;
         case Ast_Return:    pass2_Return(ctx, N->as_Return);     break;
-        case Ast_Type:      pass2_Type(ctx, N->as_Type);         break;
         case Ast_VarDecl:   pass2_VarDecl(ctx, N->as_VarDecl);   break;
         case Ast_FunDecl:   pass2_FunDecl(ctx, N->as_FunDecl);   break;
         case Ast_Var:       pass2_Var(ctx, N->as_Var);           break;

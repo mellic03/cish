@@ -4,32 +4,34 @@
 #include "../vm/vm.hpp"
 #include <stdio.h>
 
-static const char *VmRegStr( uint8_t );
+const char *VmRegStr( uint8_t );
 const char *VmOpStr( uint8_t );
 
 
 void cish::disassemble( void *base, size_t size )
 {
-    size_t rip = 0;
-    VmOp  *buf = (VmOp*)base;
-    VmOp  *op  = buf + rip;
+    size_t  rip = 0;
+    VmOp   *buf = (VmOp*)base;
+    VmOp   *op  = buf;
+    VmOp   *end = buf + size;
 
-    while (op)
+    while (op < end)
     {
         printf("[%lu] %s", rip, VmOpStr(op->opcode));
-    
-        if (op->dstreg)
-            printf(" %s", VmRegStr(op->dstreg));
-        if (op->srcreg)
-            printf(" %s", VmRegStr(op->srcreg));
-        printf(" %u\n", op->d32);
+        if (op->dstreg) printf(" %s", VmRegStr(op->dstreg));
+        if (op->srcreg) printf(" %s", VmRegStr(op->srcreg));
+        printf(" %d\n", op->imm);
 
         if (op->opcode == VmOp_ret)
             printf("\n");
 
         if (op->opcode == VmOp_exit)
             break;
-        op = buf + rip++;
+        
+        if (op->opcode >= VmOp_NumOps)
+            break;
+
+        op = (buf + rip++);
     }
 }
 
@@ -37,7 +39,7 @@ void cish::disassemble( void *base, size_t size )
 
 #include "../vm/bytecode.hpp"
 
-static const char *VmRegStr( uint8_t idx )
+const char *VmRegStr( uint8_t idx )
 {
     using namespace cish;
 
@@ -54,11 +56,6 @@ static const char *VmRegStr( uint8_t idx )
         case Reg_rsp:  return "rsp";
         case Reg_rbp:  return "rbp";
         case Reg_rip:  return "rip";
-        case Reg_memptr:    return "memptr";
-        case Reg_vsp:       return "vsp";
-        case Reg_vbp:       return "vbp";
-        case Reg_rspoff:    return "rspoff";
-        case Reg_rbpoff:    return "rbpoff";
         case Reg_rcmp0:     return "rcmp0";
         case Reg_rcmp1:     return "rcmp1";
         case Reg_tmp:       return "tmp";
@@ -74,17 +71,27 @@ const char *VmOpStr( uint8_t opcode )
     {
         default:            return "INVALID";
         case VmOp_nop:      return "nop";
-        case OpRI_mov:      return "ri_mov";
-        case OpRR_mov:      return "rr_mov";
-        case OpRI_add:      return "ri_add";
-        case OpRR_add:      return "rr_add";
-        case OpXI_gload:    return "xi_gload";
-        case OpIX_gstor:    return "ix_gstor";
-        case OpXI_vload:    return "xi_vload";
-        case OpIX_vstor:    return "ix_vstor";
-        case OpI_push:      return "push_xxi";
-        case OpR_push:      return "push_xrx";
-        case OpR_pop:       return "pop_rxx";
+        case OpI_prnt:      return "i_prnt";
+        case OpR_prnt:      return "r_prnt";
+        
+        case OpRI_mov:      return "RI_mov";
+        case OpRI_add:      return "RI_add";
+        case OpRI_sub:      return "RI_sub";
+        case OpRI_mul:      return "RI_mul";
+        case OpRI_div:      return "RI_div";
+        case OpRR_mov:      return "RR_mov";
+        case OpRR_add:      return "RR_add";
+        case OpRR_sub:      return "RR_sub";
+        case OpRR_mul:      return "RR_mul";
+        case OpRR_div:      return "RR_div";
+
+        case OpI_gload:     return "i_gload";
+        case OpI_gstor:     return "i_gstor";
+        case OpI_lload:     return "i_vload";
+        case OpI_lstor:     return "i_lstor";
+        case OpI_push:      return "i_push";
+        case OpR_push:      return "r_push";
+        case OpR_pop:       return "r_pop";
         case VmOp_swap: return "swap";
         case VmOp_add:  return "add";
         case VmOp_sub:  return "sub";

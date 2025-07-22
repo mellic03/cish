@@ -16,33 +16,44 @@ namespace cish
 class cish::CompileCtx
 {
 private:
-    fixedsize_stack<Symtab*, 128> m_symtabs;
-    VmOp  *m_buf;
-    size_t m_rip;
+    size_t   m_stacksz;
+    uint8_t *m_stack;
+
+    Symtab  *m_global;
+    Symtab  *m_local;
+
+    union { int64_t m_regs[4]; struct { int64_t m_rip, m_rsp, m_rbp, m_rxx; }; };
 
 public:
-    CompileCtx() {  }
-    CompileCtx( uint32_t *buf, size_t bufsz );
+    VmOp  *m_base;
+    size_t m_size;
 
-    // size_t frameAlloc( size_t nbytes, size_t align );
-    uint32_t rip() { return m_rip; }
-    void ripReset() { m_rip = 0; }
+    CompileCtx() {  }
+    CompileCtx( VmOp *base, size_t size );
+
+    int64_t rip() { return m_rip; }
+    int64_t rsp() { return m_rsp; }
+    int64_t rbp() { return m_rbp; }
+    // int64_t rbpoff() { return m_rbp - m_rsp; }
+
+    void clearRegs();
+    void pushFrame();
+    void popFrame();
+    int64_t resvFrame( int64_t size, int64_t align );
+
+    Symtab *globalTab() { return m_global; }
+    Symtab *localTab()  { return m_local; }
+    void    pushTab();
+    void    popTab();
 
     template <typename... Args>
     VmOp *emit( Args... args )
     {
-        return new (m_buf + m_rip++) VmOp(args...);
+        return new (m_base + m_rip++) VmOp(args...);
     }
 
-    VmOp *emit( const VmOp &op )
-    {
-        return new (m_buf + m_rip++) VmOp(op);
-    }
+    VmOp *emit( const VmOp &op );
 
-    Symtab &getGlobal() { return *m_symtabs[0]; }
-    Symtab &getLocal()  { return *m_symtabs.top(); }
-    void    pushLocal();
-    void    popLocal();
     // Symbol *findSymbol( const char *key );
 
     // template <typename T>

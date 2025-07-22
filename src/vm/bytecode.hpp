@@ -5,66 +5,49 @@
 
 namespace cish
 {
-    enum VmOpMd_: uint8_t
+    enum class MD: uint8_t
     {
-        // VmOpMd_i = 0b01,
-        // VmOpMd_r = 0b10,
-        // VmOpMd_l = 0b11,
-
-        // i_ = 0b01'00,
-        // _i = 0b00'01,
-
-        // r_ = 0b10'00,
-        // _r = 0b00'10,
-
-        // l_ = 0b11'00,
-        // _l = 0b00'11,
-
-        //   d s i --> dst src imm
-        // 0 0 0 0
-
-        VmOpMd_xxi,
-
-        VmOpMd_xr,
-        VmOpMd_rx,
-        VmOpMd_ri,
-        VmOpMd_rr,
-        VmOpMd_rl,
-
-        VmOpMd_xl,
-        VmOpMd_lx,
-        VmOpMd_li,
-        VmOpMd_lr,
-        // VmOpMd_ll,
+        nul = 0b00,
+        imm = 0b01,
+        reg = 0b10,
+        ptr = 0b11,
     };
 
     enum VmOp_: uint8_t
     {
         VmOp_nop = 0,
 
-        // VmOp_mov,
-        // VmOp_mov_rr,
-        // VmOp_mov_ri,
-        // VmOp_mov_rl,
-        // VmOp_mov_lr,
-
-        // VmOp_add_rr, VmOp_add_ri,
-        // VmOp_sub_rr, VmOp_sub_ri,
-        // VmOp_mul_rr, VmOp_mul_ri,
-        // VmOp_div_rr, VmOp_div_ri,
-
-        // VmOp_push_r, VmOp_push_i,
-        // VmOp_pop_r,
+        OpI_prnt,
+        OpR_prnt,
 
         OpRI_mov,
-        OpRR_mov,
-        OpRI_add,
-        OpRR_add,
+        OpRI_add, OpRI_sub, OpRI_mul, OpRI_div,
 
-        OpXI_gload,
-        OpIX_gstor,
-        OpXI_vload,
-        OpIX_vstor,
+        OpRR_mov,
+        OpRR_add, OpRR_sub, OpRR_mul, OpRR_div,
+
+
+        //          0000 0000 0000 0001
+        // << 11    0001 0000 0000 0000
+
+        //          0000 0000 0000 0011
+        // << 10    0000 1100 0000 0000
+
+        //          0000 0000 0000 0011
+        // << 8     0000 0011 0000 0000
+
+        //          0001 1111 0000 0000
+        //
+        // 0000 0110 0000 0000
+        // 0001 1000 0000 0000
+        // 000x xyys 0000 0000
+        // 
+        // op_rru_add = (op_signed) | (MD::reg<<10) | (MD::reg<<8) | op_xys_add,
+
+        OpI_gload,
+        OpI_gstor,
+        OpI_lload,
+        OpI_lstor,
 
         OpI_push,
         OpR_push,
@@ -98,37 +81,68 @@ namespace cish
         VmOp_CompileIR,
 
         VmOp_NumOps,
+
+
+        OP_xx_mov,
+        OP_xx_gmov,
+        // OP_mr_lmov, // mov rax, [rbp - imm] 
+
+        OP_xxx_add,
+        OP_xxx_sub,
+        OP_xxx_mul,
+        OP_xxx_div,
+
+        OP_X_gload,
+        OP_X_gstor,
     };
+
+    #define VM_INSTRUCTION_BODY \
+        struct { \
+            uint8_t is_signed :1; \
+            uint8_t xmode     :2; /* [0-3] --> X, R, I, P*/ \
+            uint8_t ymode     :2; \
+            uint8_t resv      :3; \
+            uint8_t opcode    :8; \
+        } __attribute__((packed))
+
+    union VmInstruction
+    {
+        uint16_t as_u16;
+        VM_INSTRUCTION_BODY;
+
+        VmInstruction() {  }
+        VmInstruction( uint8_t op, uint8_t sign, MD xm, MD ym )
+        : is_signed(sign), opcode(op), xmode((uint8_t)xm), ymode((uint8_t)ym) {  }
+    } __attribute__((packed));
 
     struct VmOp
     {
-        struct {
-            uint8_t opcode;
-            uint8_t dstreg;
-            uint8_t srcreg;
-            uint8_t B3;
-        };
-    
         union {
-            uint8_t  d08;
-            uint16_t d16;
-            uint32_t d32;
-            uint32_t imm;
+            VmInstruction inst;
+            VM_INSTRUCTION_BODY;
+        } __attribute__((packed));
+
+        uint8_t dstreg;
+        uint8_t srcreg;
+
+        union {
+            uint32_t immu;
+            int32_t  imm;
         };
 
-        VmOp( VmOp_ type, uint8_t dst, uint8_t src, uint32_t value )
+        VmOp( VmOp_ type, uint8_t dst, uint8_t src, int32_t value )
         :   opcode(type), dstreg(dst), srcreg(src), imm(value) {  }
 
-        VmOp( VmOp_ type, uint32_t value=0 )
+        VmOp( VmOp_ type, int32_t value=0 )
         :   VmOp(type, 0, 0, value) {  }
 
         VmOp( VmOp_ type, uint8_t A, uint8_t B )
         :   VmOp(type, A, B, 0) {  }
 
-    } __attribute__((aligned(4)));
+        VmOp()
+        : VmOp(VmOp_nop, 0, 0, 0) {  };
 
-
-
+    } __attribute__((packed));
 
 
     // enum OpMd_: uint8_t

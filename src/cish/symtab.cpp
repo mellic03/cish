@@ -3,73 +3,104 @@
 #include <cish/compile-ctx.hpp>
 #include <util/bitmanip.hpp>
 #include <string.h>
+#include <stdio.h>
 #include <assert.h>
 
+using namespace cish;
 
 
 cish::Symtab::Symtab()
-:   m_parent(nullptr),
-    m_offset(0)
-{
+:   parent(nullptr), depth(0) { clear(); }
 
+cish::Symtab::Symtab( Symtab *prnt )
+:   parent(prnt), depth(prnt->depth+1) { clear(); }
+
+
+void Symtab::clear()
+{
+    memset(&m_symbols[0], 0, sizeof(m_symbols));
+    m_symbols.clear();
 }
 
 
-size_t cish::Symtab::frameAlloc( size_t nbytes, size_t align )
+Symtab *Symtab::spawnChild()
 {
-    size_t prev = align_up(m_offset, align);
-    m_offset = prev + nbytes;
-    return prev;
-}
-
-size_t cish::Symtab::frameOffset()
-{
-    return m_offset;
+    return new Symtab(this);
 }
 
 
 
-// cish::Symtab*
-// cish::Symtab::addChild( Symtab *tab )
-// {
-//     tab->m_parent = this;
-//     m_children.push(tab);
-//     return tab;
-// }
-
-
-// void
-// cish::Symtab::clear()
-// {
-//     m_offset = 0;
-// }
-
-
-cish::Symbol*
-cish::Symtab::find( const char *key )
+Symbol *Symtab::_find( const char *key )
 {
     for (auto &sym: m_symbols)
         if (strcmp(key, sym.key) == 0)
             return &sym;
-    if (m_parent)
-        return m_parent->find(key);
+    if (parent)
+        return parent->_find(key);
     return nullptr;
 }
 
 
-#define LOL_LMAO(Tp)\
-cish::Symbol *cish::Symtab::insert( const char *key, const Tp &data )\
-{\
-    assert((find(key) == nullptr));\
-    auto *sym = m_symbols.push(Symbol(key));\
-    new (sym->as_raw) Tp(data);\
-    sym->tag = data.get_tag();\
-    return sym;\
+Symbol *Symtab::_insert( const char *key )
+{
+    m_symbols.push(Symbol(key));
+    return &m_symbols.top();
 }
 
-LOL_LMAO(cish::SymType);
-LOL_LMAO(cish::SymFunc);
-LOL_LMAO(cish::SymVar);
 
-#undef LOL_LMAO
 
+Symbol *Symtab::find( const char *key )
+{
+    Symbol *sym = _find(key);
+
+    if (sym == nullptr)
+    {
+        fprintf(stderr, "[Symtab::find] could not find symbol \"%s\"\n", key);
+        assert((false));
+    }
+
+    return sym;
+}
+
+
+Symbol *Symtab::insert( const char *key )
+{
+    if (auto *sym = _find(key))
+        return sym;
+    m_symbols.push(Symbol(key));
+    return &m_symbols.top();
+}
+
+
+
+// template <typename T>
+// cish::Symbol insert( const char *key, const T &data )
+// {
+//     cish::Symbol sym(key);
+//     new (sym.as_bytes) T(data);
+//     return sym;
+// }
+
+
+// Symbol *Symtab::addType( const char *key, const SymType &data )
+// {
+//     assert((find(key) == nullptr));
+//     m_symbols.push(insert(key, data));
+//     return &m_symbols.top();
+// }
+
+// cish::Symbol *cish::Symtab::addFunc( const char *key, const SymFunc &data )
+// {
+//     assert((find(key) == nullptr));
+//     m_symbols.push(insert(key, data));
+//     return &m_symbols.top();
+// }
+
+// cish::Symbol *cish::Symtab::addVar( const char *idntkey, const char *typekey )
+// {
+//     assert((find(idntkey) == nullptr));
+//     auto *sym = m_symbols.push(Symbol(Sym_Var, idntkey));
+//     sym->as_Var.typekey = typekey;
+//     // sym->as_Var.rbpoff  = align_up(m_offset,) = typekey;
+//     return sym;
+// }

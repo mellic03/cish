@@ -4,6 +4,8 @@
 #include <string.h>
 #include <cish/stack.hpp>
 #include <util/bitmanip.hpp>
+#include <bit>
+
 
 namespace cish
 {
@@ -13,14 +15,9 @@ namespace cish
     {
         Reg_rnul,
         Reg_rax, Reg_rbx, Reg_rcx, Reg_rdx,
-        Reg_r8,  Reg_r9,  Reg_r10, Reg_r11,
-        Reg_rsi, Reg_rdi,
-        Reg_rsp, Reg_rbp,
+        Reg_rsi, Reg_rdi, Reg_rsp, Reg_rbp,
         Reg_rip,
 
-        Reg_memptr,
-        Reg_vsp,    Reg_vbp,
-        Reg_rspoff, Reg_rbpoff,
         Reg_rcmp0,  Reg_rcmp1,
         Reg_tmp,
 
@@ -30,100 +27,77 @@ namespace cish
 
     struct VmCtx
     {
-        template <typename T, size_t Cap>
-        using Stack = cish::fixedsize_stack<T, Cap>;
-
-        VmOp     *text;
-        uint32_t *stack;
-        uint32_t *vstack;
-
-        struct call_t { uint64_t ip, sp, bp, v_sp, v_bp; };
-        Stack<call_t, 64> callstack;
+        VmOp    *text;
+        uint8_t *m_stkmin;
+        uint8_t *m_stkmax;
 
         union {
-            uint64_t regs[Reg_NumRegs];
+            int64_t regs[Reg_NumRegs];
 
-            #define REG(lbl) union { uint32_t e##lbl; uint64_t r##lbl; }
+            #define REG(lbl) union { int32_t e##lbl; int64_t r##lbl; }
             struct {
                 REG(nul);
                 REG(ax);  REG(bx); REG(cx); REG(dx);
-                REG(8);   REG(9);  REG(10); REG(11);
                 REG(si);  REG(di);
-                REG(sp);  REG(bp);
+                uint8_t *rbp, *rsp;
                 REG(ip);
 
-                uint64_t memptr;
-                uint64_t vsp, vbp;
-                uint64_t rspoff, rbpoff;
-                uint64_t rcmp0,  rcmp1;
-                uint64_t rtmp;
+                int64_t rcmp0,  rcmp1;
+                int64_t rtmp;
             };
             #undef REG
         };
 
-        VmCtx( uint32_t *program, size_t size );
+        VmCtx( VmOp *base, size_t size );
 
-        void jmp( uint32_t addr );
-        void rjmp( uint32_t addr );
+        // void callpush();
+        // void callpop();
 
-        void callpush();
-        void callpop();
-
-        // // template <typename T>
-        // void vpush( uint32_t value )
-        // {
-        //     vstack[vsp++] = value;
-        //     // *(T*)(vstack + vsp) = value;
-        //     // vsp += sizeof(T);
-        // }
-
-        // // template <typename T>
-        // uint32_t vpop()
-        // {
-        //     vsp--;
-        //     return vstack[vsp];
-        //     // vsp -= sizeof(T);
-        //     // return *(T*)(vstack + vsp);
-        // }
-
-        void vpush( uint32_t value )
+        template <typename T=uint64_t>
+        void push( T x )
         {
-            vstack[vsp++] = value;
+            rsp -= sizeof(T);
+            *(T*)(rsp) = x;
         }
 
-        uint32_t vpop()
+        template <typename T=uint64_t>
+        T pop()
         {
-            return vstack[--vsp];
+            rsp += sizeof(T);
+            return *(T*)(rsp - sizeof(T));
         }
 
-        void push( uint32_t value )
-        {
-            stack[rsp++] = value;
-        }
-
-        uint32_t pop()
-        {
-            return stack[--rsp];
-        }
-
-        uint32_t &top()
-        {
-            return stack[rsp-1];
-        }
-
-        // template <typename T>
-        // T &top()
-        // {
-        //     return *(T*)(stack+rsp - sizeof(T));
-        // }
-
+        template <typename T=uint64_t>
         void swap()
         {
-            uint32_t A = pop();
-            uint32_t B = pop();
-            push(A);
-            push(B);
+            T A = pop<T>();
+            T B = pop<T>();
+            push<T>(A);
+            push<T>(B);
         }
+
+        template <typename T, typename U>
+        void mov( T &dst, U src )
+        {
+            dst = std::bit_cast<T, U>(src);
+        }
+
+        template <typename T>
+        T &global( int64_t offset )
+        {
+            return *(T*)(rbp - offset);
+        }
+
+        template <typename T>
+        T &local( int64_t offset )
+        {
+            return *(T*)(rbp - offset);
+        }
+
+        // constexpr auto pushq = push<64, T>;
+        // template <typename T>   void pushq( T x ) { push<64>(x); }
+        // template <typename T>   T    popq() { return pop<64>(); }
+        // template <typename T>   void swapq() { swap<64>(); }
 
         // template <typename T>
         // T &local(size_t offset )

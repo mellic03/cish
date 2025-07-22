@@ -1,4 +1,5 @@
 #include "parser.hpp"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
@@ -25,13 +26,21 @@ using namespace cish;
     <term>      ::= idnt | string | number | <expr>
 */
 
-
-
-AstNode *cish::Parser::buildPT( Token *buf )
+cish::Parser::Parser( CompileCtx &ctx, Token *buf, size_t bufsz )
+:   m_ctx(ctx),
+    m_beg(buf), m_end(buf+bufsz),
+    m_prev(buf), m_curr(buf)
 {
-    m_prev = nullptr;
-    m_curr = buf;
+
+}
+
+
+AstNode *cish::Parser::buildPT()
+{
+    // for (int i=1; i<ctx->m_symtabs.size(); i++)
+    //     ctx->m_symtabs[i]->clear();
     auto *root = newNode(AstList());
+    // root->m_symtab = &(m_ctx->getGlobal());
 
     while (!isAtEnd())
     {
@@ -45,9 +54,9 @@ AstNode *cish::Parser::buildPT( Token *buf )
 }
 
 
-AstNode *cish::Parser::buildAST( Token *buf )
+AstNode *cish::Parser::buildAST()
 {
-    AstNode *PT = buildPT(buf);
+    AstNode *PT = buildPT();
     AstNode *AST = PT;
     return AST;
 }
@@ -119,7 +128,7 @@ AstNode *cish::Parser::ProdVar()
     Token  *tptok = advance();
     Token  *idtok = consume(Type::Identifier, "Expected <identifier> after \"let %s\"", tptok->lexeme);
     AstNode *idnt = newNode(AstVar(idtok));
-    AstNode *decl = newNode(AstVarDecl(tptok, idtok)); // AstVarDecl(kwtok, newNode(AstType(tptok))));
+    AstNode *decl = newNode(AstVarDecl(tptok, idtok));
 
     if (match(Type::SemiColon))
         return decl;
@@ -138,9 +147,11 @@ AstNode *cish::Parser::ProdFun()
     if (!is_typename(peek()))
         consume(Type::Error, "Expected typename after \"func\"");
 
-    Token   *rtyp = advance();
-    Token   *idnt = consume(Type::Identifier, "Expected <identifier> after \"func %s\"", rtyp->lexeme);
+    Token *rtyp = advance();
+    Token *idnt = consume(Type::Identifier, "Expected <identifier> after \"func %s\"", rtyp->lexeme);
 
+
+    m_ctx.pushTab(); // ------------------------------------------------------
     consume(Type::LeftParen);
     AstNode *args = ProdFunArgs();
 
@@ -149,8 +160,11 @@ AstNode *cish::Parser::ProdFun()
     while (!match(Type::RightBrace))
         body->as_List.push(ProdStmnt());
     // consume(Type::RightBrace);
+    m_ctx.popTab(); // -------------------------------------------------------
 
-    return newNode(AstFunDecl(idnt, rtyp, args, body));
+    AstNode *func = newNode(AstFunDecl(idnt, rtyp, args, body));
+
+    return func;
 }
 
 
@@ -245,67 +259,6 @@ AstNode *cish::Parser::ProdExpr()
     return expr;
 }
 
-
-// Token *cish::Parser::ProdOperator( uint8_t p, bool &is_right )
-// {
-//     const auto minfn = [](uint8_t x, uint8_t y ) { return (x < y) ? x : y; };
-
-//     static constexpr
-//     void *jmp[] = {
-//         &&P0,  &&P1,  &&P2,  &&P3,
-//         &&P4,  &&P5,  &&P6,  &&P7,
-//         &&P8,  &&P9,  &&P10, &&P11,
-//         &&P12, &&P13,
-//         &&Px
-//     };
-
-//     static constexpr
-//     size_t njmps = sizeof(jmp)/sizeof(jmp[0]);
-//     size_t idx   = (p<njmps) ? p : njmps-1;
-//     goto *jmp[idx];
-
-//     #define OP_L(...) if (Token *tok=match(__VA_ARGS__)) { is_right=false; return tok; }
-//     #define OP_R(...) if (Token *tok=match(__VA_ARGS__)) { is_right=true;  return tok; }
-
-//     P0: 
-//     P1:  OP_L( Type::Bang, Type::Tilde )
-//     P2:  OP_L( Type::Star, Type::Slash )
-//     P3:  OP_L( Type::Plus, Type::Minus )
-//     P4:  OP_L( Type::Less, Type::Greater, Type::LessEqual, Type::GreaterEqual,
-//                Type::EqualEqual, Type::BangEqual )
-//     P5:  OP_L( Type::Ampsnd, Type::Hat, Type::Bar )
-//     P6:  OP_L( Type::AmpAmpsnd, Type::BarBar )
-//     P7:  OP_R( Type::Equal )
-//     P8:
-//     P9:
-//     P10: 
-//     P11: 
-//     P12: 
-//     P13: 
-//     Px:  return nullptr;
-
-//     #undef OP_L
-//     #undef OP_R
-// }
-
-
-// AstNode *cish::Parser::ProdPrecedence( uint8_t p )
-// {
-//     AstNode *expr = ProdPrecA();
-//     // AstNode *expr = ProdPostfix();
-//     // bool is_right = false;
-
-//     // while (Token *tok = ProdOperator(p, is_right))
-//     // {
-//     //     AstNode *rhs = ProdPrecedence((is_right) ? p : p+1);
-//     //     expr = newNode(AstBinary(expr, tok, rhs));
-//     //     // if (is_right)
-//     //     //     expr = new AstBinary(ProdPrecedence(p), tok, expr);
-//     //     // else
-//     //     //     expr = new AstBinary(expr, tok, ProdPrecedence(p+1));
-//     // }
-//     return expr;
-// }
 
 
 AstNode *cish::Parser::ProdList()
@@ -436,13 +389,24 @@ uint32_t cish::Parser::peek( int offset )
     return (m_curr+offset)->type;
 };
 
-
 bool cish::Parser::isAtEnd()
 {
     return m_curr->type == Type::Eof;
 };
 
+Token *cish::Parser::save()
+{
+    return m_curr;
+}
 
+void cish::Parser::restore( Token *tok )
+{
+    // printf("[restore] [%lu, %lu] <--", (m_prev-m_beg), (m_curr-m_beg));
+    if (tok > m_beg)
+        m_prev = tok-1;
+    m_curr = tok;
+    // printf(" [%lu, %lu]\n", (m_prev-m_beg), (m_curr-m_beg));
+}
 
 
 

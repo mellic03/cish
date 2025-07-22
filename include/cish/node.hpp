@@ -2,16 +2,19 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <linkedlist.hpp>
 #include <cish/type.hpp>
 #include <cish/token.hpp>
 #include <cish/keyword.hpp>
-#include <linkedlist.hpp>
+#include <cish/symtab.hpp>
+#include <new>
 
 
 namespace cish
 {
-    enum Ast_: uint8_t
+    enum Ast_: uint64_t
     {
+        Ast_Base,
         Ast_List,
         Ast_Binary,
         Ast_Prefix,
@@ -30,10 +33,11 @@ namespace cish
         Ast_NumTypes,
     };
 
-    template <Ast_ tp_>
+    template <Ast_ Tp=Ast_Base>
     struct AstBase
     {
-        static constexpr Ast_ m_type = tp_;
+        static constexpr Ast_ NodeType() { return Tp; }
+        Symtab *m_symtab;
     };
 
     struct AstList;
@@ -47,7 +51,6 @@ namespace cish
     struct AstCall;
     struct AstReturn;
 
-    struct AstType;
     struct AstVarDecl;
     struct AstFunDecl;
 
@@ -137,11 +140,11 @@ struct cish::AstCond: AstBase<Ast_Cond>
 
 struct cish::AstCall: AstBase<Ast_Call>
 {
-    const char *m_callee;
+    const char *m_symkey;
     AstNode *m_expr;
 
-    AstCall( Token *callee, AstNode *expr )
-    :   m_callee(callee->lexeme), m_expr(expr) {  }
+    AstCall( Token *idnt, AstNode *expr )
+    :   m_symkey(idnt->lexeme), m_expr(expr) {  }
 };
 
 
@@ -154,27 +157,13 @@ struct cish::AstReturn: AstBase<Ast_Return>
 };
 
 
-struct cish::AstType: AstBase<Ast_Type>
-{
-    const char *m_name;
-    size_t m_size;
-    size_t m_align;
-
-    AstType( const char *name, size_t size, size_t align )
-    :   m_name(name), m_size(size), m_align(align) {  }
-
-    AstType( Token *idnt )
-    :   m_name(idnt->lexeme), m_size(8), m_align(8) {  }
-};
-
-
 struct cish::AstVarDecl: AstBase<Ast_VarDecl>
 {
-    const char *m_typename;
     const char *m_name;
+    const char *m_typekey;
 
     AstVarDecl( Token *tptok, Token *idtok )
-    :   m_typename(tptok->lexeme), m_name(idtok->lexeme) {  }
+    :    m_name(idtok->lexeme), m_typekey(tptok->lexeme) {  }
 };
 
 
@@ -228,10 +217,11 @@ struct cish::AstNumber: AstBase<Ast_Number>
 
 struct cish::AstNode: knl::LinkedListNode
 {
-    Ast_ type;
+    Ast_ m_type;
 
     union {
         uint8_t     as_bytes[];
+        AstBase<>   as_Base;
         AstList     as_List;
         AstBinary   as_Binary;
         AstPrefix   as_Prefix;
@@ -241,7 +231,6 @@ struct cish::AstNode: knl::LinkedListNode
         AstCond     as_Cond;
         AstCall     as_Call;
         AstReturn   as_Return;
-        AstType     as_Type;
         AstVarDecl  as_VarDecl;
         AstFunDecl  as_FunDecl;
         AstVar      as_Var;
@@ -249,30 +238,3 @@ struct cish::AstNode: knl::LinkedListNode
         AstNumber   as_Number;
     };
 };
-
-
-#include <stdlib.h>
-#include <new>
-
-namespace cish
-{
-    // template <typename T, typename... Args>
-    // AstNode *allocNode( Args... args )
-    // {
-    //     auto *N = new AstNode();
-    //     auto *t = new (N->as_bytes) T(args...);
-    //     N->type = t->m_type;
-    //     return N;
-    // }
-
-    template <typename T>
-    AstNode *newNode( const T &nd )
-    {
-        AstNode *N = (AstNode*)malloc(sizeof(AstNode));
-                 N->type = nd.m_type;
-
-        new (N->as_bytes) T(nd);
-        return N;
-    }
-
-}

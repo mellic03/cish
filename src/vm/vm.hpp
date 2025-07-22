@@ -5,6 +5,8 @@
 
 namespace cish
 {
-    int exec( uint32_t*, size_t );
+    struct VmOp;
+
+    int exec( VmOp*, size_t );
 }
 

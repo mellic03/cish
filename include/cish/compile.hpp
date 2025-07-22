@@ -2,10 +2,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-
 namespace cish
 {
+    class CompileCtx;
     struct AstNode;
-    uint32_t *compile( AstNode *ast, uint32_t *buf, size_t bufsz );
+    uint64_t *compile( CompileCtx&, AstNode* );
 }
 

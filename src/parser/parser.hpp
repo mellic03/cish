@@ -1,7 +1,10 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
+#include <cish/compile-ctx.hpp>
+#include <cish/symtab.hpp>
 #include <cish/type.hpp>
 #include <cish/token.hpp>
 #include <cish/node.hpp>
@@ -26,19 +29,27 @@ enum Prec_: uint8_t
 
 namespace cish
 {
+    class CompileCtx;
     class Parser;
 }
 
 
 class cish::Parser
 {
+private:
+    CompileCtx &m_ctx;
+
 public:
-    AstNode *buildPT( Token* );
-    AstNode *buildAST( Token* );
+    Token *m_beg,  *m_end;
+    Token *m_prev, *m_curr;
 
+    Parser( CompileCtx &ctx, Token *buf, size_t bufsz );
 
-// private:
-    Token   *m_prev, *m_curr;
+    // Parser( const Parser &P )
+    // :   m_ctx(P.m_ctx), m_beg(P.m_beg), m_prev(P.m_prev), m_curr(P.m_curr) {  }
+
+    AstNode *buildPT();
+    AstNode *buildAST();
 
     AstNode *ProdProgram();
     AstNode *ProdStmnt();
@@ -54,8 +65,6 @@ public:
     AstNode *ProdScope();
 
     AstNode *ProdExpr();
-    AstNode *ProdPratt( Prec_ );
-    Token   *ProdOperator( uint8_t p, bool &is_right );
     AstNode *ProdPrecedence();
     AstNode *ProdPostfix();
     AstNode *ProdPrefix();
@@ -69,6 +78,8 @@ public:
     uint32_t peek( int offset=0 );
     Token *check( uint32_t type );
     bool   isAtEnd();
+    Token *save();
+    void   restore( Token* );
 
     // template <uint32_t... types>
     template <typename... Args>
@@ -95,5 +106,13 @@ public:
         return check(rest...);
     }
 
+    template <typename T>
+    AstNode *newNode( const T &nd )
+    {
+        AstNode *N = (AstNode*)malloc(sizeof(AstNode));
+                 N->m_type = T::NodeType();
+        T *ptr = new (N->as_bytes) T(nd);
+        return N;
+    }
 };
 

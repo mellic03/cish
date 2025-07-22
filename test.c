@@ -26,11 +26,11 @@ func i32 testFunction( i32 x, i32 y )
 
 func i32 main()
 {
-    let i32 X = 12;
-    let i32 A = 50;
-    let i32 B = 25;
-    let i32 Z = get1000();
-    let i32 F = get1000();
+    let i64 X = 12;
+    let i64 A = 50;
+    let i64 B = 25;
+    let i64 Z = get1000();
+    let i64 F = get1000();
 
     return (A-X) * B + (Z + F);
 }

@@ -18,6 +18,7 @@ g++ \
     src/cish/token.cpp \
     src/lexer/lexer-state.cpp \
     src/lexer/lexer.cpp \
+    src/parser/production.cpp \
     src/parser/parser.cpp \
     src/parser/precedence.cpp \
     src/vm/ctx.cpp \

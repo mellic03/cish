@@ -6,10 +6,11 @@
 #include <string.h>
 
 #include <cish.hpp>
+#include <cish/symtab.hpp>
+#include <cish/compile-ctx.hpp>
 #include <cish/compile.hpp>
 #include <cish/token.hpp>
 #include <cish/interpret.hpp>
-#include <cish/symtab.hpp>
 #include <cish/lexer.hpp>
 #include "assembler/assembler.hpp"
 #include "parser/parser.hpp"
@@ -20,6 +21,7 @@
 #include "../include/mpc.h"
 
 extern void printAst( cish::AstNode* );
+extern void functional_test( cish::Parser& );
 
 
 int main( int argc, char **argv )
@@ -51,34 +53,44 @@ int main( int argc, char **argv )
     // size_t tokcount = lexer.tokenize(buffer.c_str(), tokbuf.data(), tokbuf.size());
     size_t tokcount = cish::lexerMain(buffer.c_str(), tokbuf.data(), tokbuf.size());
 
-    std::cout << "---------------- LEXER -----------------\n";
-    for (size_t i=0; i<tokcount; i++)
-    {
-        if (tokbuf[i].type != cish::Type::SemiColon)
-            printf("%s ", cish::TypeToStr(tokbuf[i].type));
-        else
-            printf(";\n");
-    }
-    std::cout << "\n";
-    std::cout << "----------------------------------------\n\n\n";
+    // std::cout << "---------------- LEXER -----------------\n";
+    // for (size_t i=0; i<tokcount; i++)
+    // {
+    //     if (tokbuf[i].type != cish::Type::SemiColon)
+    //         printf("%s ", cish::TypeToStr(tokbuf[i].type));
+    //     else
+    //         printf(";\n");
+    // }
+    // std::cout << "\n";
+    // std::cout << "----------------------------------------\n\n\n";
 
+
+
+    using namespace cish;
+
+    cish::CompileCtx ctx(new VmOp[512], 512*sizeof(VmOp));
+
+    cish::Parser psr(ctx, tokbuf.data(), tokbuf.size());
+    functional_test(psr);
+    return 0;
 
     std::cout << "---------------- PARSER ----------------\n";
     std::cout << "tokcount: " << tokcount << "\n";
-    cish::Parser parser;
-    auto *ast = parser.buildAST(tokbuf.data());
-        //   ptree->print();
+    cish::Parser parser(ctx, tokbuf.data(), tokbuf.size());
+    auto *ast = parser.buildAST();
     std::cout << "----------------------------------------\n\n";
 
 
     std::cout << "---------------- COMPILER --------------\n";
-    uint32_t program[512];
-    cish::compile(ast, program, sizeof(program));
+    cish::compile(ctx, ast);
     std::cout << "----------------------------------------\n\n";
 
-    cish::disassemble(program, 512*sizeof(uint32_t));
+    std::cout << "---------------- DISASSEMBLY -----------\n";
+    cish::disassemble(ctx.m_base, ctx.m_size);
+    std::cout << "----------------------------------------\n\n";
+
     std::cout << "---------------- EXEC ------------------\n";
-    int res = cish::exec(program, sizeof(program));
+    int res = cish::exec(ctx.m_base, ctx.m_size);
     std::cout << "res: " << res << "\n";
     std::cout << "----------------------------------------\n\n";
 
