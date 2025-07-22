@@ -47,15 +47,6 @@ struct StateNewToken: LexState<Type::None>
 };
 
 
-struct StateComment: LexState<Type::None>
-{
-    virtual bool isTrigger( char ) final {  return false; }
-    virtual bool isTerminal( char ch ) final { return ch=='\0' || ch=='\n'; }
-    virtual bool isInput( char ch ) final { return true; };
-    virtual void produce( cish::Lexer& ) final;
-};
-
-
 struct StateError: LexState<Type::Error>
 {
     StateError( const char *fmt, ... );
@@ -71,7 +62,7 @@ struct StateIdentifier: LexState<Type::Identifier>
     virtual bool isInput( char ) final;
     virtual bool isTerminal( char ) final;
     virtual bool isTrigger( char ) final;
-    virtual void produce( cish::Lexer& ) final;
+    // virtual void produce( cish::Lexer& ) final;
 };
 
 struct StateNumber: LexState<Type::Number>

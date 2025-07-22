@@ -6,23 +6,19 @@
 #include <string.h>
 
 #include <cish.hpp>
-#include <cish/symtab.hpp>
-#include <cish/compile-ctx.hpp>
-#include <cish/compile.hpp>
-#include <cish/token.hpp>
-#include <cish/interpret.hpp>
+#include <cish/symbol.hpp>
 #include <cish/lexer.hpp>
-#include "assembler/assembler.hpp"
-#include "parser/parser.hpp"
+#include <cish/token-stream.hpp>
+#include <cish/parser.hpp>
+#include <cish/compile.hpp>
+#include <cish/compile-ctx.hpp>
+
 #include "vm/bytecode.hpp"
 #include "vm/vm.hpp"
 
 
-#include "../include/mpc.h"
-
-extern void printAst( cish::AstNode* );
-extern void functional_test( cish::Parser& );
-
+// extern void printAst( cish::AstNode* );
+extern void ParseTest( cish::TokenStream& );
 
 int main( int argc, char **argv )
 {
@@ -69,73 +65,31 @@ int main( int argc, char **argv )
     using namespace cish;
 
     cish::CompileCtx ctx(new VmOp[512], 512*sizeof(VmOp));
-
-    cish::Parser psr(ctx, tokbuf.data(), tokbuf.size());
-    functional_test(psr);
+    // cish::Parser psr(ctx, tokbuf.data(), tokbuf.size());
+    // ParseTest(psr);
+    TokenStream stream(tokbuf.data(), tokbuf.size());
+    ParseTest(stream);
     return 0;
 
     std::cout << "---------------- PARSER ----------------\n";
     std::cout << "tokcount: " << tokcount << "\n";
     cish::Parser parser(ctx, tokbuf.data(), tokbuf.size());
-    auto *ast = parser.buildAST();
+    auto *parseTree = parser.buildPT();
     std::cout << "----------------------------------------\n\n";
 
 
-    std::cout << "---------------- COMPILER --------------\n";
-    cish::compile(ctx, ast);
-    std::cout << "----------------------------------------\n\n";
-
-    std::cout << "---------------- DISASSEMBLY -----------\n";
-    cish::disassemble(ctx.m_base, ctx.m_size);
-    std::cout << "----------------------------------------\n\n";
-
-    std::cout << "---------------- EXEC ------------------\n";
-    int res = cish::exec(ctx.m_base, ctx.m_size);
-    std::cout << "res: " << res << "\n";
-    std::cout << "----------------------------------------\n\n";
-
-
-    // std::cout << "---------------- RUNNING ---------------\n";
-    // // // int result = cish::interpret(ptree);
-    // // int64_t *ptree_stack = new int64_t[512];
-    // // int64_t *rsp = ptree_stack;
-    // // memset(ptree_stack, 0, sizeof(ptree_stack));
-
-    // cish::CompileCtx ctx;
-    // ctx.symtab   = cish::sym_create(2048);;
-    // ctx.text_out = stdout;
-
-    // ptree->compile(ctx);
-    // // printf("Result: %ld\n", ptree_stack[0]);
+    // std::cout << "---------------- COMPILER --------------\n";
+    // cish::compile(ctx, parseTree);
     // std::cout << "----------------------------------------\n\n";
 
-    // mpc_parser_t *Expr  = mpc_new("expression");
-    // mpc_parser_t *Prod  = mpc_new("product");
-    // mpc_parser_t *Value = mpc_new("value");
-    // mpc_parser_t *Maths = mpc_new("maths");
+    // // std::cout << "---------------- DISASSEMBLY -----------\n";
+    // // cish::disassemble(ctx.m_base, ctx.m_size);
+    // // std::cout << "----------------------------------------\n\n";
 
-    // mpca_lang(MPCA_LANG_DEFAULT,
-    // " expression : <product> (('+' | '-') <product>)*; "
-    // " product    : <value>   (('*' | '/')   <value>)*; "
-    // " value      : /[0-9]+/ | '(' <expression> ')';    "
-    // " maths      : /^/ <expression> /$/;               ",
-    // Expr, Prod, Value, Maths, NULL);
-
-    // mpc_result_t r;
-
-    // if (mpc_parse("input", src, Maths, &r))
-    // {
-    //     mpc_ast_print((mpc_ast_t*)(r.output));
-    //     mpc_ast_delete((mpc_ast_t*)(r.output));
-    // }
-    // else
-    // {
-    //     mpc_err_print(r.error);
-    //     mpc_err_delete(r.error);
-    // }
-
-    // mpc_cleanup(4, Expr, Prod, Value, Maths);
-
+    // std::cout << "---------------- EXEC ------------------\n";
+    // int res = cish::exec(ctx.m_base, ctx.m_size);
+    // std::cout << "res: " << res << "\n";
+    // std::cout << "----------------------------------------\n\n";
 
     return 0;
 }

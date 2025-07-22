@@ -1,9 +1,10 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+
 #include <cish/stack.hpp>
-#include <cish/node.hpp>
-#include <cish/symtab.hpp>
+#include <cish/symbol.hpp>
+
 
 namespace cish
 {
@@ -16,19 +17,21 @@ namespace cish
 class cish::CompileCtx
 {
 private:
-    size_t   m_stacksz;
-    uint8_t *m_stack;
+    template <typename T, size_t Cap>
+    using Stack = cish::fixedsize_stack<T, Cap>;
 
-    Symtab  *m_global;
-    Symtab  *m_local;
+    Stack<SymTab, 128>  m_symtabs;
+    SymTab             *m_global;
+    SymTab             *m_local;
 
     union { int64_t m_regs[4]; struct { int64_t m_rip, m_rsp, m_rbp, m_rxx; }; };
 
 public:
-    VmOp  *m_base;
-    size_t m_size;
+    VmOp         *m_base;
+    size_t        m_size;
+    VmStack<2048> vmstack;
 
-    CompileCtx() {  }
+    CompileCtx(): vmstack() {  }
     CompileCtx( VmOp *base, size_t size );
 
     int64_t rip() { return m_rip; }
@@ -37,12 +40,12 @@ public:
     // int64_t rbpoff() { return m_rbp - m_rsp; }
 
     void clearRegs();
-    void pushFrame();
-    void popFrame();
+    // void pushFrame();
+    // void popFrame();
     int64_t resvFrame( int64_t size, int64_t align );
 
-    Symtab *globalTab() { return m_global; }
-    Symtab *localTab()  { return m_local; }
+    SymTab *globalTab() { return m_global; }
+    SymTab *localTab()  { return m_local; }
     void    pushTab();
     void    popTab();
 

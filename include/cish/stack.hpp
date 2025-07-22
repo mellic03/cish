@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <assert.h>
+#include <util/bitmanip.hpp>
 
 
 namespace cish
@@ -10,6 +11,9 @@ namespace cish
 
     template <typename T, size_t Cap>
     class fixedsize_stack;
+
+    template <int64_t Cap>
+    struct VmStack;
 }
 
 
@@ -29,6 +33,9 @@ public:
     T &top() { return m_buf[m_idx-1]; }
 };
 
+
+
+
 inline int minfn(int x, int y) { return (x < y) ? x : y; };
 inline int maxfn(int x, int y) { return (x > y) ? x : y; };
 inline int clampfn(int x, int lo, int hi) { return maxfn(lo, minfn(x, hi)); };
@@ -37,7 +44,7 @@ template <typename T, size_t Cap>
 class cish::fixedsize_stack
 {
 private:
-    T *m_buf;
+    T  *m_buf;
     int m_idx;
 
 public:
@@ -67,6 +74,9 @@ public:
     int size() { return m_idx; }
     int capacity() { return (int)Cap; }
     void clear() { m_idx = 0; }
+
+    T &front() { return m_buf[0]; }
+    const T &front() const { return m_buf[0]; }
 
     T &operator[](int i) { return m_buf[i]; }
     const T &operator[](int i) const { return m_buf[i]; }
@@ -159,4 +169,66 @@ struct VmStack
 };
 
 
+
+
+template <int64_t Cap>
+struct cish::VmStack
+{
+    uint8_t  m_base[Cap];
+    int64_t  rbp;
+    int64_t  rsp;
+
+    VmStack()
+    {
+        clear();
+    }
+
+    VmStack( const VmStack& ) = delete;
+    VmStack( VmStack&& ) = delete;
+    VmStack &operator=( const VmStack& ) = delete;
+    VmStack &operator=( VmStack&& ) = delete;
+
+    template <typename T>
+    void pushq( T x )
+    {
+        rsp -= 8;
+        assert((0 <= rsp));
+
+        *(int64_t*)(m_base + rsp) = x;
+    }
+
+    template <typename T>
+    void popq( T *x = nullptr)
+    {
+        if (x) x = *(int64_t*)(m_base + rsp);
+    
+        rsp += 8;
+        assert((0 <= rsp));
+        assert((rsp <= Cap+8));
+    }
+
+    void clear()
+    {
+        rbp = Cap;
+        rsp = Cap;
+    }
+
+    size_t frame_resv( size_t size, size_t align )
+    {
+        rsp = align_down(rsp-size, align);
+        return rbp - rsp;
+    }
+
+    void frame_push()
+    {
+        pushq(rbp);
+        rbp = rsp;
+    }
+
+    void frame_pop()
+    {
+        rsp = rbp;
+        popq(&rbp);
+    }
+};
 

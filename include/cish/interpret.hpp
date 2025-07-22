@@ -2,7 +2,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <cish/node.hpp>
 
 namespace cish
 {

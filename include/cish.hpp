@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cish/symtab.hpp>
+#include <cish/symbol.hpp>
 
 #include <stddef.h>
 #include <stdint.h>

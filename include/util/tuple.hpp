@@ -11,12 +11,53 @@ namespace nonstd
     {
         T first;
         U second;
-        pair(): first(T()), second(U()) {  }
-        pair(const T &a, const U &b ): first(a), second(b) {  }
-        pair(const pair &rhs ): first(rhs.first), second(rhs.second) {  }
-        pair(pair &&rhs ): first(rhs.first), second(rhs.second) {  }
-    };
     
+        pair( const T &a, const U &b ): first(a), second(b) {  }
+        pair( const T &a             ): pair(a, U())   {  }
+        pair(                        ): pair(T(), U()) {  }
+
+        pair( const pair  &rhs ): first(rhs.first), second(rhs.second) {  }
+        pair(       pair &&rhs ): first(rhs.first), second(rhs.second) {  }
+    };
+
+    template <typename T, typename U, typename V>
+    struct triple
+    {
+        T first;
+        U second;
+        V third;
+
+        triple( const T &a, const U &b, const V &c ): first(a), second(b), third(c) {  }
+        triple( const T &a, const U &b             ): triple(a,   b,   V()) {  }
+        triple( const T &a                         ): triple(a,   U(), V()) {  }
+        triple(                                    ): triple(T(), U(), V()) {  }
+
+        triple( const triple  &rhs ): first(rhs.first), second(rhs.second), third(rhs.third) {  }
+        triple(       triple &&rhs ): first(rhs.first), second(rhs.second), third(rhs.third) {  }
+
+        triple( const pair<T, U> &ab ): triple(ab.first, ab.second) {  }
+        triple( const pair<T, U> &ab, const V &c ): triple(ab.first, ab.second, c) {  }
+        triple( const T &a, const pair<U, V> &bc ): triple(a, bc.first, bc.second) {  }
+
+    };
+
+    template <size_t Idx, typename T, typename U>
+    decltype(auto) get( const pair<T, U> &p )
+    {
+        if      constexpr (Idx == 0) return p.first;
+        else if constexpr (Idx == 1) return p.second;
+        else    static_assert((0<=Idx && Idx<=1), "Index out of bounds");
+    }
+
+    template <size_t Idx, typename T, typename U, typename V>
+    decltype(auto) get( const triple<T, U, V> &p )
+    {
+        if      constexpr (Idx == 0) return p.first;
+        else if constexpr (Idx == 1) return p.second;
+        else if constexpr (Idx == 2) return p.third;
+        else    static_assert((0<=Idx && Idx<=2), "Index out of bounds");
+    }
+
 }
 
 
@@ -24,7 +65,6 @@ namespace nonstd
 {
     template <typename... Items>
     struct Tuple;
-
 
     template <size_t Idx, typename T, typename... Items>
     struct Tuple_impl;
@@ -85,6 +125,7 @@ namespace nonstd
     //     return static_cast<decltype(tup.m_value)&&>(tup.m_value);
     // }
 
+
     template <size_t Idx, typename... Items>
     decltype(auto) get(Tuple_impl<Idx, Items...>& t)
     {
@@ -101,8 +142,8 @@ namespace nonstd
     decltype(auto) get(Tuple_impl<Idx, Items...>&& t)
     {
         return t.m_value;
-        // return std::move(t.m_value);
     }
+
 
 
     template <typename... Items>
@@ -112,7 +153,11 @@ namespace nonstd
         using inht_type::inht_type;
     };
 
+    template <typename T, typename U>
+    struct Tuple<T, U>: public pair<T, U> {  };
 
+    template <typename T, typename U, typename V>
+    struct Tuple<T, U, V>: public triple<T, U, V> {  };
 }
 
 

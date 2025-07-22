@@ -4,10 +4,11 @@
 #include <stdlib.h>
 
 #include <cish/compile-ctx.hpp>
-#include <cish/symtab.hpp>
+#include <cish/symbol.hpp>
 #include <cish/type.hpp>
 #include <cish/token.hpp>
-#include <cish/node.hpp>
+#include <cish/parse-node.hpp>
+#include <cish/prod-node.hpp>
 
 
 
@@ -48,28 +49,28 @@ public:
     // Parser( const Parser &P )
     // :   m_ctx(P.m_ctx), m_beg(P.m_beg), m_prev(P.m_prev), m_curr(P.m_curr) {  }
 
-    AstNode *buildPT();
-    AstNode *buildAST();
+    ParseNode *buildPT();
+    // ParseNode *buildAST();
 
-    AstNode *ProdProgram();
-    AstNode *ProdStmnt();
-    AstNode *ProdExprStmnt();
-    AstNode *ProdReturn();
-    AstNode *ProdBlock();
-    AstNode *ProdTypeName();
-    AstNode *ProdCond();
-    AstNode *ProdVar();
-    AstNode *ProdFun();
-    AstNode *ProdFunArgs();
-    AstNode *ProdTypeIdnt();
-    AstNode *ProdScope();
+    ParseNode *ProdProgram();
+    ParseNode *ProdStmnt();
+    ParseNode *ProdExprStmnt();
+    ParseNode *ProdReturn();
+    ParseNode *ProdBlock();
+    ParseNode *ProdTypeName();
+    ParseNode *ProdCond();
+    ParseNode *ProdVar();
+    ParseNode *ProdFun();
+    ParseNode *ProdFunArgs();
+    ParseNode *ProdTypeIdnt();
+    ParseNode *ProdScope();
 
-    AstNode *ProdExpr();
-    AstNode *ProdPrecedence();
-    AstNode *ProdPostfix();
-    AstNode *ProdPrefix();
-    AstNode *ProdList();
-    AstNode *ProdPrimary();
+    ParseNode *ProdExpr();
+    ParseNode *ProdPrecedence();
+    ParseNode *ProdPostfix();
+    ParseNode *ProdPrefix();
+    ParseNode *ProdList();
+    ParseNode *ProdPrimary();
 
     Token *expect( uint32_t type, const char *fmt, ... );
     Token *consume( uint32_t type, const char *fmt, ... );
@@ -97,22 +98,12 @@ public:
         return nullptr;
     }
 
-    // template <uint32_t... types>
     template <typename... Args>
     Token *check( uint32_t type, Args... rest )
     {
         Token *tok = check(type);
         if (tok) return tok;
         return check(rest...);
-    }
-
-    template <typename T>
-    AstNode *newNode( const T &nd )
-    {
-        AstNode *N = (AstNode*)malloc(sizeof(AstNode));
-                 N->m_type = T::NodeType();
-        T *ptr = new (N->as_bytes) T(nd);
-        return N;
     }
 };
 

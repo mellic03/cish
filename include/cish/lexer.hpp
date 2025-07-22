@@ -2,38 +2,84 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <cish/type.hpp>
 #include <cish/token.hpp>
+
 
 
 namespace cish
 {
     class Lexer;
-    struct Token;
+    size_t lexerMain( const char *src, Token *tokbuf, size_t tokbufsz );
 }
+
+struct iLexState;
+
+
+// struct iLexer
+// {
+//     iLexer( Token *buf, size_t bufsz );
+
+//     Token *tokenize( const char *src );
+//     char   advance();
+//     // {
+//     //     m_prev = m_curr;
+//     //     if (m_curr) m_curr++;
+//     //     return *m_prev;
+//     // };
+
+// protected:
+//     void emit();
+
+// private:
+//     const char *m_curr;
+//     const char *m_prev;
+//     char   m_lexbuf[256];
+//     char  *m_lextop;
+//     Token *m_toktop;
+//     Token *m_tokend;
+//     size_t m_lineno;
+//     size_t m_colno;
+
+// };
+
+
 
 
 class cish::Lexer
 {
-public:
-    const char *m_src;
-    size_t tokenize( const char *src, Token *buf, size_t bufsz );
-
-    char advance();
-    char prev() { return *(m_src-1); }
-    char peek() { return *m_src; };
-    auto peekstr() { return m_src; };
-    bool check( const char *brk );
-    char match( const char *brk );
-    // bool matchStr( const char* );
-    // bool checkBrk( const char* );
-    // bool checkStr( const char* );
-    bool isAtEnd();
-    void emit( uint32_t type );
-
 private:
-    const char *m_end;
-    Token      *m_out;
-    Token      *m_outend;
+    const char *m_src;
+    const char *m_curr;
+    const char *m_prev;
+    char   m_lexbuf[256];
+    char  *m_lextop;
+    Token *m_toktop;
+    Token *m_tokend;
+    size_t m_lineno;
+    size_t m_colno;
+    iLexState *getState();
+    void reset( const char*, Token*, size_t );
+
+public:
+    size_t numStates;
+    iLexState **states;
+
+    // Lexer( Token *tokbuf, size_t tokbufsz )
+    // : toktop(tokbuf), tokend(tokbuf+tokbufsz) {  };
+
+    size_t tokenize( const char *src, Token *tokbuf, size_t tokbufsz );
+    bool   isAtEnd();
+    void   keep( char );
+    char   prev() { return *m_prev; };
+    char   peek() { return *m_curr; };
+    char   match( const char *brk );
+    char   advance();
+    char   retreat();
+    void   emit( uint32_t type );
+    const char *lexbuf() { return m_lexbuf; };
 
 };
+
+
 

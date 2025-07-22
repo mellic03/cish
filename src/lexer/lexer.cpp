@@ -1,5 +1,5 @@
-#include "lexer.hpp"
-#include "lexer-state.hpp"
+#include <cish/lexer.hpp>
+#include <cish/lexer-state.hpp>
 #include <cish/keyword.hpp>
 #include <string.h>
 #include <kstring.h>
@@ -164,8 +164,6 @@ void cish::Lexer::emit( uint32_t type )
 size_t cish::lexerMain( const char *src, Token *tokbuf, size_t tokbufsz )
 {
     static cish::Lexer glexer;
-
-    glexer.m_cmntState = new StateComment();
 
     static iLexState *states[] = {
         // glexer.initState,

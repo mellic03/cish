@@ -1,4 +1,4 @@
-// #include <cish/symtab.hpp>
+// #include <cish/symbol.hpp>
 // #include <stdio.h>
 // #include <kstring.h>
 // #include <new>

@@ -6,7 +6,7 @@
 #include <cish/type.hpp>
 #include <cish/token.hpp>
 #include <cish/keyword.hpp>
-#include <cish/symtab.hpp>
+#include <cish/symbol.hpp>
 #include <new>
 
 
@@ -37,7 +37,7 @@ namespace cish
     struct AstBase
     {
         static constexpr Ast_ NodeType() { return Tp; }
-        Symtab *m_symtab;
+        SymTab *m_symtab;
     };
 
     struct AstList;

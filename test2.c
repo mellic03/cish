@@ -1,2 +1,1 @@
-i32 test Function()
-
+int testvalue( int a );
