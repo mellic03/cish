@@ -58,6 +58,19 @@ namespace nonstd
         else    static_assert((0<=Idx && Idx<=2), "Index out of bounds");
     }
 
+
+    template <typename T, typename U>
+    pair<T, U> make_pair( const T &t, const U &u )
+    {
+        return pair<T, U>(t, u);
+    }
+
+    template <typename T, typename U, typename V>
+    triple<T, U, V> make_triple( const T &t, const U &u, const V &v )
+    {
+        return triple<T, U, V>(t, u, v);
+    }
+
 }
 
 

@@ -1,265 +1,139 @@
-#include <cish/prod-node.hpp>
-#include <cish/token-stream.hpp>
-#include <cish/parser-gen.hpp>
-#include <stdio.h>
-
-using namespace cish;
-using namespace parsegen;
-
-template <uint32_t Tp>
-struct xToken
-{   ProdNode *operator()( TokenStream &P )
-    {
-        auto *state = P.save();
-
-        if (Token *tok = P.match(Tp))
-            return (ProdNode*)ProdNode::New<Atom>(tok->type, tok->lexeme);
-
-        P.restore(state);
-    
-        if (Token *tok = P.match(Type::Eof))
-            return (ProdNode*)ProdNode::New<Atom>(tok->type, tok->lexeme);
-
-        return nullptr;
-    }
-};
-
-
-template <typename prod_type>
-struct xIdentity
-{
-    ProdNode *operator()( TokenStream &stream )
-    {
-        prod_type prod;
-        return prod(stream);
-    }
-};
-
-
-
-// Program      ::= <StmntList>
-// StmntList    ::= <Stmnt>*
-// Stmnt        ::= <Decl> | <Assign>
-
-// Decl         ::= <VarDecl> | <FunDecl>
-
-// VarDecl      ::= idnt <VarDeclList> ";"
-// VarDeclList  ::= idnt ("," idnt)*
-
-// FunDecl      ::= idnt idnt "(" <FunDeclList>? ")" (";" | <FunBody>)
-// FunDeclList  ::= <FunDeclArg> ("," idnt idnt)*
-// FunDeclArg   ::= idnt idnt
-// FunBody      ::= "{" <Stmnt>* "}"
+// #include <cish/prod-node.hpp>
+// #include <cish/token-stream.hpp>
+// #include <cish/parser-gen.hpp>
+// #include <stdio.h>
+
+// using namespace cish;
+// using namespace parsegen;
+
+
+// template <uint32_t Tp>
+// struct xToken
+// {   ParseNode *operator()( TokenStream &stream )
+//     {
+//         auto *state = stream.save();
+
+//         if (Token *tok = stream.match(Tp))
+//             return (ParseNode*)ParseNode::New<Atom>(tok->lexeme);
+//         stream.restore(state);
+        
+//         if (stream.match(Type::Eof))
+//             return (ParseNode*)ParseNode::New<Atom>("EOF");
+//             // return true;
+//         stream.restore(state);
+        
+//         return nullptr;
+//     }
+// };
+
+
+// xToken<Type::Eof>         xEOF;
+// xToken<Type::Comma>       xComma;
+// xToken<Type::SemiColon>   xBreak;
+// xToken<Type::LeftParen>   xOpen;
+// xToken<Type::RightParen>  xShut;
+// xToken<Type::LeftBrace>   xOpenBrace;
+// xToken<Type::RightBrace>  xShutBrace;
+// xToken<Type::Identifier>  xIdnt;
+// xToken<Type::String>      xString;
+// xToken<Type::Number>      xNumber;
+
+// xToken<Type::KwdReturn>   xKwdReturn;
+// xToken<Type::KwdIf>       xKwdIf;
+// xToken<Type::KwdWhile>    xKwdWhile;
+// xToken<Type::KwdFor>      xKwdFor;
+
+
+// xToken<Type::Equal>        xEqual;
+
+// xToken<Type::Less>         xLES;
+// xToken<Type::Greater>      xGTR;
+// xToken<Type::LessEqual>    xLEQ;
+// xToken<Type::GreaterEqual> xGEQ;
+// xToken<Type::EqualEqual>   xEQEQ;
+// xToken<Type::BangEqual>    xBangEQ;
+
+// xToken<Type::Star>         xStar;
+// xToken<Type::Slash>        xSlash;
+// xToken<Type::Plus>         xPlus;
+// xToken<Type::Minus>        xMinus;
+// xToken<Type::PlusPlus>     xPlusPlus;
+// xToken<Type::MinusMinus>   xMinusMinus;
+// xToken<Type::Bang>         xBang;
+// xToken<Type::Tilde>        xTilde;
+// xToken<Type::Bar>          xBar;
+// xToken<Type::Ampsnd>       xAmpsnd;
+// xToken<Type::Hat>          xHat;
+
+
+// static ParseNode *xExprFn( TokenStream& );
+// static ParseNode *xStmntFn( TokenStream& );
+
+// FPtr xExpr(xExprFn);
+// FPtr xStmnt(xStmntFn);
+
+
+// auto xIdntIdnt    = xIdnt & xIdnt;
+// auto xAtom        = xIdnt|xString|xNumber;
+
+// auto xParenExpr   = xOpen & xExpr & xShut;
+// auto xBlockScope  = xOpenBrace & *xStmnt & xShutBrace;
+
+// auto xVarDecl     = xIdntIdnt & *(xComma & xIdnt) & xBreak;
+
+// auto xFunDeclArg  = xIdntIdnt;
+// auto xFunDeclList = xFunDeclArg & *(xComma & xFunDeclArg);
+// auto xFunDecl     = xIdntIdnt & (xOpen & ~xFunDeclList & xShut) & xBlockScope;
+
+// auto xFunCallList = xExpr & *(xComma & xExpr);
+// auto xFunCall     = xIdnt & (xOpen & ~xFunCallList & xShut);
+
+// auto xPrimary     = xParenExpr|xFunCall|xAtom;
+
+// auto xPostfix     = xPrimary & ~(xPlusPlus|xMinusMinus);
+// auto xPrefix      = ~(xPlusPlus|xMinusMinus|xBang|xTilde) & xPostfix;
+
+// auto xBinary4     = xPrefix  & *((xBar|xAmpsnd|xHat) & xPrefix);
+// auto xBinary3     = xBinary4 & *((xStar|xSlash) & xBinary4);
+// auto xBinary2     = xBinary3 & *((xPlus|xMinus) & xBinary3);
+// auto xBinary1     = xBinary2 & *((xLES|xGTR|xLEQ|xGEQ|xEQEQ|xBangEQ) & xBinary2);
+// auto xBinary      = xBinary1 & ~(xEqual & xExpr);
+
+// static ParseNode *xExprFn( TokenStream &s )
+// {
+//     return xBinary(s);
+// }
+
+
+// auto xDecl        = xFunDecl | xVarDecl;
+// auto xReturn      = xKwdReturn & xExpr & xBreak;
+// auto xCond        = (xKwdIf|xKwdWhile|xKwdFor) & xParenExpr & xBlockScope;
+// auto xStmntList   = *xStmnt;
+
+// static ParseNode *xStmntFn( TokenStream &s )
+// {
+//     auto fA = xReturn | xCond | xDecl | (xExpr & xBreak);
+//     return fA(s);
+// }
+
+
+// void ParseTest( CompileCtx &ctx, TokenStream &stream )
+// {
+//     while (!stream.isAtEnd())
+//     {
+//         if (ParseNode *node = xStmnt(stream))
+//         {
+//             printf("Match!\n");
+//         }
+
+//         else
+//         {
+//             printf("No match!\n");
+//             break;
+//         }
+//     }
+
+// }
 
-// FunCall      ::= idnt "(" <FunCallList>? ")"
-// FunCallList  ::= <FunCallArg> ("," idnt)*
-// FunCallArg   ::= idnt
-
-// Assign       ::= idnt "=" <Expr> ";"
-// Expr         ::= <Binary1> <Expr>*
-// Binary1      ::= <Binary2> (("+" | "-") <Binary2>)*
-// Binary2      ::= <Prefix>  (("*" | "/") <Prefix>)*
-// Prefix       ::= ("++" | "--" | "!" | "~")? <Postfix>
-// Postfix      ::= ("++" | "--")? <Primary>
-// Primary      ::= <Atom> | FunCall | "(" <Expr> ")"
-// Atom         ::= idnt | string | number
-
-
-using xEOF        = xToken<Type::Eof>;
-using xComma      = xToken<Type::Comma>;
-using xBreak      = xToken<Type::SemiColon>;
-using xLeftParen  = xToken<Type::LeftParen>;
-using xRightParen = xToken<Type::RightParen>;
-using xIdnt       = xToken<Type::Identifier>;
-using xString     = xToken<Type::String>;
-using xNumber     = xToken<Type::Number>;
-
-using xEqual      = xToken<Type::Equal>;
-using xStar       = xToken<Type::Star>;
-using xSlash      = xToken<Type::Slash>;
-using xPlus       = xToken<Type::Plus>;
-using xMinus      = xToken<Type::Minus>;
-using xPlusPlus   = xToken<Type::PlusPlus>;
-using xMinusMinus = xToken<Type::MinusMinus>;
-using xBang       = xToken<Type::Bang>;
-using xTilde      = xToken<Type::Tilde>;
-using xIdntIdnt   = SEQ<xIdnt, xIdnt>;
-
-
-using xVarDeclList = SEQ<xIdnt, KleeneSEQ<xComma, xIdnt>>;
-using xVarDecl     = SEQ<xIdnt, xVarDeclList>;
-
-using xFunDeclList = SEQ<xIdntIdnt, KleeneSEQ<xComma, xIdntIdnt>>;
-// using xFunDeclA    = SEQ<xLeftParen, xRightParen>;
-// using xFunDeclB    = SEQ<xLeftParen, xIdntIdnt, xRightParen>;
-// using xFunDeclC    = SEQ<xLeftParen, xFunDeclList, xRightParen>;
-// using xFunDecl     = SEQ<xIdntIdnt, OR<xFunDeclA, xFunDeclB, xFunDeclC>>;
-using xFunDecl     = SEQ<xIdntIdnt, SEQ<xLeftParen, OPT<xFunDeclList>, xRightParen>>;
-
-using xFunCallList = SEQ<xIdnt, KleeneSEQ<xComma, xIdnt>>;
-using xFunCallA    = SEQ<xLeftParen, xRightParen>;
-using xFunCallB    = SEQ<xLeftParen, xFunCallList, xRightParen>;
-using xFunCall     = SEQ<xIdnt, OR<xFunCallA, xFunCallB>>;
-
-// Primary  ::= <Atom> | FunCall | "(" <Expr> ")"
-// Postfix  ::= <Primary> ("++" | "--")?
-// Prefix   ::= ("++" | "--" | "!" | "~")? <Postfix>
-// Binary2  ::= <Prefix>  (("*" | "/") <Prefix>)*
-// Binary1  ::= <Binary2> (("+" | "-") <Binary2>)*
-// Expr     ::= <Binary1> <Expr>*
-
-using xAtom      = OR<xIdnt, xString, xNumber>;
-using xParenExpr = SEQ<xLeftParen, xIdentity<struct xExpr>, xRightParen>;
-using xPrimary   = OR<xParenExpr, xFunCall, xAtom>;
-
-using xBinaryOp  = OR<xPlus, xMinus, xStar, xSlash>;
-using xBinaryRep = KleeneSEQ<xBinaryOp, xPrimary>;
-using xBinaryA   = SEQ<xPrimary, xBinaryRep>;
-using xBinaryB   = xPrimary;
-using xBinary    = OR<xBinaryA, xBinaryB>;
-
-using  xExprA = SEQ<xBinary, xIdentity<struct xExpr>>;
-using  xExprB = xBinary;
-struct xExpr: public OR<xExprA, xExprB> {};
-
-using xDecl      = OR<xFunDecl, xVarDecl>;
-using xAssign    = SEQ<xIdnt, xEqual, xExpr>;
-
-using xStmnt     = SEQ<OR<xDecl, xAssign>, xBreak>;
-using xStmntList = Kleene<xStmnt>;
-
-
-
-void ParseTest( TokenStream &stream )
-{
-    SEQ<xFunDecl, xBreak> func;
-    ProdNode *node = func(stream);
-
-    if (!node)
-        printf("No match!\n");
-    else
-        printf("Match!\n");
-}
-
-
-
-cish::Program::Program( TokenStream &stream )
-{
-
-}
-
-
-cish::StmntList::StmntList( TokenStream &stream )
-{
-
-}
-
-
-cish::Stmnt::Stmnt( TokenStream &stream )
-{
-
-}
-
-
-cish::Decl::Decl( TokenStream &stream )
-{
-
-}
-
-
-cish::VarDecl::VarDecl( TokenStream &stream )
-{
-    stream.match(Type::Identifier);
-}
-
-
-cish::FunDecl::FunDecl( TokenStream &stream )
-{
-
-}
-
-
-cish::FunDeclList::FunDeclList( TokenStream &stream )
-{
-
-}
-
-
-cish::FunDeclArg::FunDeclArg( TokenStream &stream )
-{
-
-}
-
-
-cish::FunBody::FunBody( TokenStream &stream )
-{
-
-}
-
-
-cish::FunCall::FunCall( TokenStream &stream )
-{
-
-}
-
-
-cish::FunCallList::FunCallList( TokenStream &stream )
-{
-
-}
-
-
-cish::FunCallArg::FunCallArg( TokenStream &stream )
-{
-
-}
-
-
-cish::Assign::Assign( TokenStream &stream )
-{
-
-}
-
-
-cish::Expr::Expr( TokenStream &stream )
-{
-
-}
-
-
-cish::Binary1::Binary1( TokenStream &stream )
-{
-
-}
-
-
-cish::Binary2::Binary2( TokenStream &stream )
-{
-
-}
-
-
-cish::Prefix::Prefix( TokenStream &stream )
-{
-
-}
-
-
-cish::Postfix::Postfix( TokenStream &stream )
-{
-
-}
-
-
-cish::Primary::Primary( TokenStream &stream )
-{
-
-}
-
-
-cish::Atom::Atom( TokenStream &stream )
-{
-
-}
 
 

@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include <cish.hpp>
-#include <cish/symbol.hpp>
+#include <cish/symtab.hpp>
 #include <cish/lexer.hpp>
 #include <cish/token-stream.hpp>
 #include <cish/parser.hpp>
@@ -18,7 +18,7 @@
 
 
 // extern void printAst( cish::AstNode* );
-extern void ParseTest( cish::TokenStream& );
+// extern void ParseTest( cish::CompileCtx&, cish::TokenStream& );
 
 int main( int argc, char **argv )
 {
@@ -45,42 +45,37 @@ int main( int argc, char **argv )
 
 
     std::array<cish::Token, 512> tokbuf;
-    // cish::Lexer lexer;
-    // size_t tokcount = lexer.tokenize(buffer.c_str(), tokbuf.data(), tokbuf.size());
     size_t tokcount = cish::lexerMain(buffer.c_str(), tokbuf.data(), tokbuf.size());
 
-    // std::cout << "---------------- LEXER -----------------\n";
-    // for (size_t i=0; i<tokcount; i++)
-    // {
-    //     if (tokbuf[i].type != cish::Type::SemiColon)
-    //         printf("%s ", cish::TypeToStr(tokbuf[i].type));
-    //     else
-    //         printf(";\n");
-    // }
-    // std::cout << "\n";
-    // std::cout << "----------------------------------------\n\n\n";
+    std::cout << "---------------- LEXER -----------------\n";
+    for (size_t i=0; i<tokcount; i++)
+    {
+        if (tokbuf[i].type != cish::Type::SemiColon)
+            printf("%s ", cish::TypeToStr(tokbuf[i].type));
+        else
+            printf(";\n");
+    }
+    std::cout << "\n";
+    std::cout << "----------------------------------------\n\n\n";
 
 
 
     using namespace cish;
 
     cish::CompileCtx ctx(new VmOp[512], 512*sizeof(VmOp));
-    // cish::Parser psr(ctx, tokbuf.data(), tokbuf.size());
-    // ParseTest(psr);
     TokenStream stream(tokbuf.data(), tokbuf.size());
-    ParseTest(stream);
-    return 0;
+    iNode *parseTree = cish::Parse(stream);
 
-    std::cout << "---------------- PARSER ----------------\n";
-    std::cout << "tokcount: " << tokcount << "\n";
-    cish::Parser parser(ctx, tokbuf.data(), tokbuf.size());
-    auto *parseTree = parser.buildPT();
-    std::cout << "----------------------------------------\n\n";
-
-
-    // std::cout << "---------------- COMPILER --------------\n";
-    // cish::compile(ctx, parseTree);
+    // std::cout << "---------------- PARSER ----------------\n";
+    // std::cout << "tokcount: " << tokcount << "\n";
+    // cish::Parser parser(ctx, tokbuf.data(), tokbuf.size());
+    // auto *parseTree = parser.buildPT();
     // std::cout << "----------------------------------------\n\n";
+
+
+    std::cout << "---------------- COMPILER --------------\n";
+    cish::compile(ctx, parseTree);
+    std::cout << "----------------------------------------\n\n";
 
     // // std::cout << "---------------- DISASSEMBLY -----------\n";
     // // cish::disassemble(ctx.m_base, ctx.m_size);

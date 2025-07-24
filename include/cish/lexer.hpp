@@ -75,7 +75,6 @@ public:
     char   peek() { return *m_curr; };
     char   match( const char *brk );
     char   advance();
-    char   retreat();
     void   emit( uint32_t type );
     const char *lexbuf() { return m_lexbuf; };
 

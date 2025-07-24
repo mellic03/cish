@@ -62,7 +62,7 @@ struct StateIdentifier: LexState<Type::Identifier>
     virtual bool isInput( char ) final;
     virtual bool isTerminal( char ) final;
     virtual bool isTrigger( char ) final;
-    // virtual void produce( cish::Lexer& ) final;
+    virtual void produce( cish::Lexer& ) final;
 };
 
 struct StateNumber: LexState<Type::Number>

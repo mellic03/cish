@@ -36,6 +36,15 @@ public:
     void remove( NodeType* );
     void makeFirst();
 
+    NodeType *front() { return m_root; }
+    NodeType *back()
+    {
+        NodeType *curr = m_root;
+        while (curr && (curr->next))
+            curr = (NodeType*)(curr->next);
+        return curr;
+    }
+
     size_t size() const { return (size_t)m_size; };
 
     struct iterator

@@ -16,7 +16,8 @@ CompileCtx::CompileCtx( VmOp *base, size_t size )
     m_size(size),
     vmstack()
 {
-    m_symtabs.push(SymTab(512*1024, nullptr));
+    // m_symtabs.push(SymTab(512*1024, nullptr));
+    m_symtabs.push(SymTab(nullptr));
     m_global = &(m_symtabs.front());
     m_global->loadGlobalSymbols();
     m_local  = m_global;
@@ -33,7 +34,8 @@ void CompileCtx::clearRegs()
 
 void CompileCtx::pushTab()
 {
-    m_local = new SymTab(512*1024, m_local);
+    // m_local = new SymTab(512*1024, m_local);
+    m_local = new SymTab(m_local);
 }
 
 void CompileCtx::popTab()

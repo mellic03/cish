@@ -73,15 +73,15 @@ bool StateIdentifier::isTrigger( char ch )  { return isInput(ch) && !isdigit(ch)
 bool StateIdentifier::isTerminal( char ch ) { return !isInput(ch); }
 bool StateIdentifier::isInput( char ch )    { return isalpha(ch) || isdigit(ch) || ch=='_'; }
 
-// void StateIdentifier::produce( cish::Lexer &lex )
-// {
-//     produce_noemit(lex);
-//     auto *buf = lex.lexbuf();
+void StateIdentifier::produce( cish::Lexer &lex )
+{
+    produce_noemit(lex);
+    auto *buf = lex.lexbuf();
 
-//     if      (cish::isKeyword(buf))  lex.emit(cish::getKwdType(buf));
-//     else if (cish::isDataType(buf)) lex.emit(cish::getDataType(buf));
-//     else                            lex.emit(Type::Identifier);
-// }
+    if      (cish::isKeyword(buf))  lex.emit(cish::getKwdType(buf));
+    else                            lex.emit(Type::Identifier);
+    // else if (cish::isDataType(buf)) lex.emit(cish::getDataType(buf));
+}
 
 // uint32_t StateIdentifier::accept( const char *buf )
 // {

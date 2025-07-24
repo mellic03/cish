@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cish/symbol.hpp>
+#include <cish/symtab.hpp>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -9,8 +9,8 @@
 namespace cish
 {
     struct Token;
-    struct Node;
+    struct iNode;
 
     size_t lexerMain( const char *src, Token *buf, size_t bufsz );
-    Node *parserMain( const char *src, Token *buf, size_t bufsz );
+    iNode *parserMain( const char *src, Token *buf, size_t bufsz );
 }

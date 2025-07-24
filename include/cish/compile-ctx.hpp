@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include <cish/stack.hpp>
-#include <cish/symbol.hpp>
+#include <cish/symtab.hpp>
 
 
 namespace cish

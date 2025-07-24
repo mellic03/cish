@@ -38,7 +38,7 @@
 // #include <iostream>
 // #include <tuple>
 
-// void functional_test( Parser &P )
+// void functional_test( cish::TokenStream &ts )
 // {
 //     using namespace parsegen;
 
@@ -54,13 +54,13 @@
 //     using xLiteral    = OR<xString, xNumber>;
 
 //     using IdntIdnt    = SEQ<xIdnt, xIdnt>;
-//     using DeclList    = SEQ<xLeftParen, Kleene<IdntIdnt>, xRightParen>;
+//     using DeclList    = SEQ<xLeftParen, KStar<IdntIdnt>, xRightParen>;
 //     using xAssign     = SEQ<xIdnt, xToken<Type::Equal>, xLiteral>;
 
 //     using VarDecl     = SEQ<xIdnt, xIdnt, xBreak>;
 
 //     using xArgRep     = SEQ<xComma, IdntIdnt>;
-//     using ArgListC    = SEQ<IdntIdnt, Kleene<xArgRep>>;
+//     using ArgListC    = SEQ<IdntIdnt, KStar<xArgRep>>;
 //     using xUsedList   = SEQ<xLeftParen, ArgListC, xRightParen>;
 //     using xEmptyList  = SEQ<xLeftParen, xRightParen>;
 //     using ArgList     = OR<xEmptyList, xUsedList>;
@@ -68,13 +68,13 @@
 
 //     using Decl        = OR<FunDecl, VarDecl>;
 //     using xStmnt      = SEQ<Decl, xBreak>;
-//     using xProg       = Kleene<xStmnt>;
+//     using xProg       = KStar<xStmnt>;
 
 
 //     FunDecl parsefunc;
-//     ProdNode *AST = parsefunc(P);
+//     iNode *node = parsefunc(ts);
 
-//     if (AST)
+//     if (node)
 //         printf("Match!\n");
 //     else
 //         printf("No match!\n");

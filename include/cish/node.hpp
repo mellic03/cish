@@ -6,7 +6,7 @@
 #include <cish/type.hpp>
 #include <cish/token.hpp>
 #include <cish/keyword.hpp>
-#include <cish/symbol.hpp>
+#include <cish/symtab.hpp>
 #include <new>
 
 

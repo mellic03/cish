@@ -5,22 +5,21 @@
 #include <cish/compile.hpp>
 #include <cish/compile-ctx.hpp>
 #include <cish/parse-node.hpp>
-#include "./pass1.hpp"
+#include "./pass.hpp"
 
-#include <assert.h>
+#include <stdio.h>
+
 
 using namespace cish;
 
-// extern void compile_pass1( CompileCtx&, AstNode* );
-// extern void compile_pass2( CompileCtx&, AstNode* );
 
-uint64_t *cish::compile( CompileCtx &ctx, ProdNode *node )
+uint64_t *cish::compile( CompileCtx &ctx, iNode *root )
 {
-    // CompilePass_1 pass1;
-    // pass1.visit(ctx, *node);
+    CompilePass_0().visit(ctx, root);
 
-    // compile_pass1(ctx, ast);
-    // compile_pass2(ctx, ast);
+    CompilePass_1().visit(ctx, root);
+
+    CompilePass_2().visit(ctx, root);
 
     return nullptr;
 }

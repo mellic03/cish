@@ -122,27 +122,18 @@ char cish::Lexer::advance()
     if (!isAtEnd())
         m_curr++;
 
-    m_colno++;
-
     if (*m_prev == '\n')
     {
         m_lineno++;
         m_colno = 0;
     }
+    else
+    {
+        m_colno++;
+    }
 
     return *m_prev;
-
-};
-
-char cish::Lexer::retreat()
-{
-    m_prev = m_curr;
-    if (m_src < m_curr)
-        m_curr--;
-    return *m_prev;
-
-};
-
+}
 
 
 void cish::Lexer::emit( uint32_t type )
@@ -151,7 +142,7 @@ void cish::Lexer::emit( uint32_t type )
         m_lexbuf[0] = '\0';
 
     if (type != Type::None)
-        *(m_toktop++) = Token(type, m_lexbuf, m_lineno, m_colno);
+        *(m_toktop++) = Token(type, m_lexbuf, m_lineno+1, m_colno);
 
     // printf("\'%c\' emit [%s] \"%s\" \n", *m_curr, TypeToStr(type), m_lexbuf);
 

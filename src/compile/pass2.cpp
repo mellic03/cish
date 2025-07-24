@@ -1,3 +1,151 @@
+#include "./pass.hpp"
+#include "../vm/emit.hpp"
+#include "../vm/ctx.hpp"
+#include "../vm/vm.hpp"
+#include <stdio.h>
+
+using namespace cish;
+
+void CompilePass_2::visit_ErrorNode( CompileCtx &ctx, ErrorNode *N )
+{
+
+}
+
+
+void CompilePass_2::visit_NodeList( CompileCtx &ctx, NodeList *N )
+{
+    for (iNode *node: *N)
+    {
+        visit(ctx, node);
+    }
+}
+
+
+void CompilePass_2::visit_DeclList( CompileCtx &ctx, DeclList *N )
+{
+    for (VarDecl *decl: *N)
+    {
+        visit(ctx, decl);
+    }
+}
+
+
+void CompilePass_2::visit_CallList( CompileCtx &ctx, CallList *N )
+{
+    for (Idnt *idnt: *N)
+    {
+        visit(ctx, idnt);
+    }
+}
+
+
+
+void CompilePass_2::visit_BlockScope( CompileCtx &ctx, BlockScope *N )
+{
+    visit(ctx, N->m_body);
+}
+
+
+
+void CompilePass_2::visit_VarDecl( CompileCtx &ctx, VarDecl *N )
+{
+    SymTab *tab = ctx.localTab();
+    SymVar *sym = tab->find<SymVar>(N->m_name);
+
+}
+
+
+void CompilePass_2::visit_FunDecl( CompileCtx &ctx, FunDecl *N )
+{
+    visit(ctx, N->m_args);
+    visit(ctx, N->m_body);
+}
+
+
+void CompilePass_2::visit_RetNode( CompileCtx &ctx, RetNode *N )
+{
+    visit(ctx, N->m_expr);
+}
+
+
+void CompilePass_2::visit_IfNode( CompileCtx &ctx, IfNode *N )
+{
+
+}
+
+
+void CompilePass_2::visit_WhileNode( CompileCtx &ctx, WhileNode *N )
+{
+
+}
+
+
+void CompilePass_2::visit_ForNode( CompileCtx &ctx, ForNode *N )
+{
+
+}
+
+
+
+void CompilePass_2::visit_PrefixOp( CompileCtx &ctx, PrefixOp *N )
+{
+
+}
+
+
+void CompilePass_2::visit_PostfixOp( CompileCtx &ctx, PostfixOp *N )
+{
+
+}
+
+
+void CompilePass_2::visit_BinaryOp( CompileCtx &ctx, BinaryOp *N )
+{
+    visit(ctx, N->m_lhs);
+    visit(ctx, N->m_rhs);
+
+}
+
+
+void CompilePass_2::visit_Assign( CompileCtx &ctx, Assign *N )
+{
+    visit(ctx, N->m_expr);
+}
+
+
+void CompilePass_2::visit_FunCall( CompileCtx &ctx, FunCall *N )
+{
+    visit(ctx, N->m_args);
+}
+
+
+
+void CompilePass_2::visit_Idnt( CompileCtx &ctx, Idnt *N )
+{
+    SymTab *tab = N->m_symtab;
+    auto   *sym = tab->find<SymVar>(N->m_name);
+
+    // void *addr = tab->find(N->m_name);
+    // printf("[CompilePass_2:::visit_Idnt] name=%s, addr=0x%lx\n", N->m_name, addr);
+}
+
+
+void CompilePass_2::visit_String( CompileCtx &ctx, String *N )
+{
+}
+
+
+void CompilePass_2::visit_Number( CompileCtx &ctx, Number *N )
+{
+
+}
+
+
+
+
+
+
+
 // #include "../vm/emit.hpp"
 // #include "../vm/ctx.hpp"
 // #include "../vm/vm.hpp"
@@ -212,7 +360,6 @@
 
 //     // VmInstruction(OP_xxx_sub, 0, MD::reg, MD::imm);
 //     // Emit_addImm(ctx, Reg_rsp, tsym->size);
-//     // printf("%s %s &[%lu]\n", vsym->typekey, vrhs->key, vsym->offset);
 
 // }
 
@@ -224,8 +371,6 @@
 //     auto [fsym, sym] = tab->find<SymFunc>(N.m_name);
 //     fsym->addr = ctx.rip();
 
-//     printf("[%lu] %s\n", fsym->addr, sym->key);
-//     printf("allocSz: %luB\n", fsym->allocsz);
 
 //     // ctx.emit(); VmInstruction(OP_xxx_sub, 0, MD::reg, MD::imm);
 //     Emit_subImm(ctx, Reg_rsp, fsym->allocsz);

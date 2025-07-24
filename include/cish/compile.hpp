@@ -5,9 +5,9 @@
 namespace cish
 {
     class CompileCtx;
-    union ProdNode;
+    struct iNode;
 
     // uint64_t *compile( CompileCtx&, AstNode* );
-    uint64_t *compile( CompileCtx&, ProdNode* );
+    uint64_t *compile( CompileCtx&, iNode* );
 }
 

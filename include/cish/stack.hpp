@@ -51,10 +51,9 @@ public:
     fixedsize_stack()
     :   m_buf(new T[Cap]), m_idx(0) {  };
 
-    T *push( const T &x )
+    void push( const T &x )
     {
         m_buf[m_idx++] = x;
-        return &m_buf[m_idx-1];
     }
 
     T pop()

@@ -1,93 +1,169 @@
-#include "./pass1.hpp"
+#include "./pass.hpp"
+#include <stdio.h>
 
 using namespace cish;
 
 
-// void CompilePass_1::visit_List( CompileCtx &ctx, List &N )
-// {
+void CompilePass_1::visit_ErrorNode( CompileCtx &ctx, ErrorNode *N )
+{
+    N->m_symtab = ctx.localTab();
 
-// }
-
-
-// void CompilePass_1::visit_Atom( CompileCtx &ctx, Atom &N )
-// {
-
-// }
+}
 
 
-// void CompilePass_1::visit_Program( CompileCtx &ctx, Program &N )
-// {
+void CompilePass_1::visit_NodeList( CompileCtx &ctx, NodeList *N )
+{
+    N->m_symtab = ctx.localTab();
 
-// }
-
-
-// void CompilePass_1::visit_Stmnt( CompileCtx &ctx, Stmnt &N )
-// {
-
-// }
-
-
-// void CompilePass_1::visit_StmntList( CompileCtx &ctx, StmntList &N )
-// {
-
-// }
+    for (iNode *node: *N)
+    {
+        visit(ctx, node);
+    }
+}
 
 
-// void CompilePass_1::visit_Decl( CompileCtx &ctx, Decl &N )
-// {
+void CompilePass_1::visit_DeclList( CompileCtx &ctx, DeclList *N )
+{
+    SymTab *tab = ctx.localTab();
 
-// }
-
-
-// void CompilePass_1::visit_Assign( CompileCtx &ctx, Assign &N )
-// {
-
-// }
-
-
-// void CompilePass_1::visit_Expr( CompileCtx &ctx, Expr &N )
-// {
-
-// }
+    for (auto *decl: *N)
+    {
+        tab->insert<SymVar>(decl->m_name, decl->m_type);
+    }
+}
 
 
-// void CompilePass_1::visit_VarDecl( CompileCtx &ctx, VarDecl &N )
-// {
-//     // ((ProdNode*)&N)->as_Assign.
-// }
+void CompilePass_1::visit_CallList( CompileCtx &ctx, CallList *N )
+{
+    SymTab *tab = ctx.localTab();
+
+    for (Idnt *idnt: *N)
+    {
+        visit(ctx, idnt);
+    }
+}
 
 
-// void CompilePass_1::visit_FunDecl( CompileCtx &ctx, FunDecl &N )
-// {
+void CompilePass_1::visit_BlockScope( CompileCtx &ctx, BlockScope *N )
+{
+    N->m_symtab = ctx.localTab();
 
-// }
-
-
-// void CompilePass_1::visit_DeclList( CompileCtx &ctx, DeclList &N )
-// {
-
-// }
+    ctx.pushTab();
+    visit(ctx, N->m_body);
+    ctx.popTab();
+}
 
 
-// void CompilePass_1::visit_Call( CompileCtx &ctx, Call &N )
-// {
+void CompilePass_1::visit_VarDecl( CompileCtx &ctx, VarDecl *N )
+{
+    N->m_symtab = ctx.localTab();
 
-// }
-
-
-// void CompilePass_1::visit_CallList( CompileCtx &ctx, CallList &N )
-// {
-
-// }
+    SymTab *tab = N->m_symtab;
+    tab->insert<SymVar>(N->m_name, N->m_type);
+}
 
 
-// void CompilePass_1::visit_Term( CompileCtx &ctx, Term &N )
-// {
+void CompilePass_1::visit_FunDecl( CompileCtx &ctx, FunDecl *N )
+{
+    N->m_symtab = ctx.localTab();
 
-// }
+    SymTab *tab = N->m_symtab;
+    tab->insert<SymFunc>(N->m_name, N->m_type);
+
+    ctx.pushTab();
+    visit(ctx, N->m_args);
+    visit(ctx, N->m_body);
+    ctx.popTab();
+}
+
+
+void CompilePass_1::visit_RetNode( CompileCtx &ctx, RetNode *N )
+{
+    N->m_symtab = ctx.localTab();
+    visit(ctx, N->m_expr);
+}
+
+
+void CompilePass_1::visit_IfNode( CompileCtx &ctx, IfNode *N )
+{
+    N->m_symtab = ctx.localTab();
+
+    ctx.pushTab();
+    visit(ctx, N->m_cond);
+    visit(ctx, N->m_body);
+    ctx.popTab();
+}
+
+
+void CompilePass_1::visit_WhileNode( CompileCtx &ctx, WhileNode *N )
+{
+    N->m_symtab = ctx.localTab();
+
+    ctx.pushTab();
+    visit(ctx, N->m_cond);
+    visit(ctx, N->m_body);
+    ctx.popTab();
+}
+
+
+void CompilePass_1::visit_ForNode( CompileCtx &ctx, ForNode *N )
+{
+    N->m_symtab = ctx.localTab();
+
+}
 
 
 
+void CompilePass_1::visit_PrefixOp( CompileCtx &ctx, PrefixOp *N )
+{
+    N->m_symtab = ctx.localTab();
+}
+
+
+void CompilePass_1::visit_PostfixOp( CompileCtx &ctx, PostfixOp *N )
+{
+    N->m_symtab = ctx.localTab();
+}
+
+
+void CompilePass_1::visit_BinaryOp( CompileCtx &ctx, BinaryOp *N )
+{
+    N->m_symtab = ctx.localTab();
+    visit(ctx, N->m_lhs);
+    visit(ctx, N->m_rhs);
+}
+
+
+void CompilePass_1::visit_Assign( CompileCtx &ctx, Assign *N )
+{
+    N->m_symtab = ctx.localTab();
+    visit(ctx, N->m_expr);
+}
+
+
+void CompilePass_1::visit_FunCall( CompileCtx &ctx, FunCall *N )
+{
+    N->m_symtab = ctx.localTab();
+    visit(ctx, N->m_args);
+}
+
+
+void CompilePass_1::visit_Idnt( CompileCtx &ctx, Idnt *N )
+{
+    N->m_symtab = ctx.localTab();
+}
+
+
+void CompilePass_1::visit_String( CompileCtx &ctx, String *N )
+{
+    N->m_symtab = ctx.localTab();
+}
+
+
+void CompilePass_1::visit_Number( CompileCtx &ctx, Number *N )
+{
+    N->m_symtab = ctx.localTab();
+}
 
 
 

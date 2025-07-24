@@ -73,12 +73,12 @@ cish::Token *cish::TokenStream::advance()
 }
 
 
-cish::Token *cish::TokenStream::check( uint32_t type )
-{
-    if (m_curr->type == type)
-        return m_curr;
-    return nullptr;
-};
+// cish::Token *cish::TokenStream::check( uint32_t type )
+// {
+//     if (m_curr->type == type)
+//         return m_curr;
+//     return nullptr;
+// };
 
 
 uint32_t cish::TokenStream::peek( int offset )

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.31)
-SET(CMAKE_CXX_FLAGS -std=c++23)
+SET(CMAKE_CXX_FLAGS "-std=c++23 -g")
 
 project(cish)
 
